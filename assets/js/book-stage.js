@@ -304,16 +304,16 @@ export class BookStage {
     this.render();
   }
 
-  createShelfPose(triggerRect) {
-    const { x, y, scale } = this.projectTrigger(triggerRect);
+  createShelfPose(target) {
+    const { x, y, scale, rotation } = this.projectShelfTarget(target);
     return {
       x,
       y,
       z: 0,
-      scale: scale * SHELF_SCALE_FACTOR,
-      rx: SHELF_ROTATION.rx,
-      ry: SHELF_ROTATION.ry,
-      rz: SHELF_ROTATION.rz,
+      scale,
+      rx: rotation.rx,
+      ry: rotation.ry,
+      rz: rotation.rz,
       cover: 0,
       shadow: 0.72,
       reading: 0,
@@ -387,18 +387,48 @@ export class BookStage {
     };
   }
 
-  projectTrigger(triggerRect) {
+  projectShelfTarget(target) {
+    if (target && "centerX" in target && "centerY" in target && "height" in target) {
+      return this.projectMeasurement(target);
+    }
+
+    return this.projectTriggerRect(target);
+  }
+
+  projectTriggerRect(viewportRect) {
     const rect = this.host.getBoundingClientRect();
     const viewHeight = 2 * Math.tan(this.THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.position.z;
     const viewWidth = viewHeight * this.camera.aspect;
-    const centerX = triggerRect.left + triggerRect.width / 2 - rect.left;
-    const centerY = triggerRect.top + triggerRect.height / 2 - rect.top;
+    const centerX = viewportRect.left + viewportRect.width / 2 - rect.left;
+    const centerY = viewportRect.top + viewportRect.height / 2 - rect.top;
     const x = (centerX / rect.width - 0.5) * viewWidth;
     const y = (0.5 - centerY / rect.height) * viewHeight;
     const unitsPerPixel = viewHeight / rect.height;
-    const scale = Math.max(0.13, (triggerRect.height * unitsPerPixel) / this.dimensions.height);
+    const scale = Math.max(0.13, (viewportRect.height * unitsPerPixel) / this.dimensions.height);
 
-    return { x, y, scale };
+    return {
+      x,
+      y,
+      scale: scale * SHELF_SCALE_FACTOR,
+      rotation: { ...SHELF_ROTATION },
+    };
+  }
+
+  projectMeasurement(measurement) {
+    const rect = this.host.getBoundingClientRect();
+    const viewHeight = 2 * Math.tan(this.THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.position.z;
+    const viewWidth = viewHeight * this.camera.aspect;
+    const x = ((measurement.centerX - rect.left) / rect.width - 0.5) * viewWidth;
+    const y = (0.5 - (measurement.centerY - rect.top) / rect.height) * viewHeight;
+    const unitsPerPixel = viewHeight / rect.height;
+    const scale = Math.max(0.13, (measurement.height * unitsPerPixel) / this.dimensions.height);
+
+    return {
+      x,
+      y,
+      scale,
+      rotation: measurement.rotation || { ...SHELF_ROTATION },
+    };
   }
 
   setPose(nextPose) {
@@ -406,9 +436,52 @@ export class BookStage {
     this.applyPose();
   }
 
+  interpolatePose(startPose, targetPose, easedProgress) {
+    const nextPose = {};
+
+    Object.keys(startPose).forEach((key) => {
+      nextPose[key] = lerp(startPose[key], targetPose[key], easedProgress);
+    });
+
+    return nextPose;
+  }
+
+  interpolateTimelinePose(previousPose, startPose, targetPose, nextPose, progress) {
+    const nextState = {};
+
+    Object.keys(startPose).forEach((key) => {
+      nextState[key] = this.interpolateSmoothValue(
+        previousPose[key],
+        startPose[key],
+        targetPose[key],
+        nextPose[key],
+        progress,
+      );
+    });
+
+    return nextState;
+  }
+
+  interpolateSmoothValue(previousValue, startValue, targetValue, nextValue, progress) {
+    const tangentScale = 0.28;
+    const progressSquared = progress * progress;
+    const progressCubed = progressSquared * progress;
+    const m1 = (targetValue - previousValue) * tangentScale;
+    const m2 = (nextValue - startValue) * tangentScale;
+    const interpolated = (
+      ((2 * progressCubed) - (3 * progressSquared) + 1) * startValue
+      + (progressCubed - (2 * progressSquared) + progress) * m1
+      + ((-2 * progressCubed) + (3 * progressSquared)) * targetValue
+      + (progressCubed - progressSquared) * m2
+    );
+    const lowerBound = Math.min(startValue, targetValue);
+    const upperBound = Math.max(startValue, targetValue);
+
+    return Math.min(upperBound, Math.max(lowerBound, interpolated));
+  }
+
   async animateTo(targetPose, duration, easing, token, tokenReader) {
     const startPose = { ...this.pose };
-    const keys = Object.keys(startPose);
 
     return new Promise((resolve) => {
       const startedAt = performance.now();
@@ -421,19 +494,103 @@ export class BookStage {
 
         const progress = Math.min(1, (now - startedAt) / duration);
         const eased = easing(progress);
-        const nextPose = {};
-
-        keys.forEach((key) => {
-          nextPose[key] = lerp(startPose[key], targetPose[key], eased);
-        });
-
-        this.setPose(nextPose);
+        this.setPose(this.interpolatePose(startPose, targetPose, eased));
 
         if (progress < 1) {
           window.requestAnimationFrame(tick);
           return;
         }
 
+        resolve(true);
+      };
+
+      window.requestAnimationFrame(tick);
+    });
+  }
+
+  async animateTimeline(segments, token, tokenReader, onUpdate = () => {}) {
+    const normalizedSegments = [];
+
+    segments
+      .filter((segment) => segment?.pose && segment.duration > 0)
+      .forEach((segment, index) => {
+        normalizedSegments.push({
+          ...segment,
+          easing: segment.easing || ((value) => value),
+          from: index === 0 ? { ...this.pose } : { ...normalizedSegments[index - 1].pose },
+        });
+      });
+
+    if (normalizedSegments.length === 0) {
+      onUpdate({ progress: 1, segmentIndex: -1, segmentProgress: 1, segmentEased: 1 });
+      return true;
+    }
+
+    const keyPoses = [{ ...this.pose }, ...normalizedSegments.map((segment) => ({ ...segment.pose }))];
+    const totalDuration = normalizedSegments.reduce((sum, segment) => sum + segment.duration, 0);
+
+    return new Promise((resolve) => {
+      const startedAt = performance.now();
+
+      const tick = (now) => {
+        if (tokenReader() !== token) {
+          resolve(false);
+          return;
+        }
+
+        const elapsed = Math.min(totalDuration, now - startedAt);
+        let traversed = 0;
+        let activeIndex = 0;
+
+        while (
+          activeIndex < normalizedSegments.length - 1
+          && elapsed > traversed + normalizedSegments[activeIndex].duration
+        ) {
+          traversed += normalizedSegments[activeIndex].duration;
+          activeIndex += 1;
+        }
+
+        const activeSegment = normalizedSegments[activeIndex];
+        const segmentElapsed = Math.min(activeSegment.duration, Math.max(0, elapsed - traversed));
+        const segmentProgress = activeSegment.duration
+          ? segmentElapsed / activeSegment.duration
+          : 1;
+        const useSegmentEasing = activeIndex === normalizedSegments.length - 1;
+        const previousPose = keyPoses[Math.max(0, activeIndex - 1)];
+        const startPose = keyPoses[activeIndex];
+        const targetPose = keyPoses[activeIndex + 1];
+        const nextPose = keyPoses[Math.min(keyPoses.length - 1, activeIndex + 2)];
+        const segmentEased = useSegmentEasing ? activeSegment.easing(segmentProgress) : segmentProgress;
+
+        this.setPose(
+          this.interpolateTimelinePose(
+            previousPose,
+            startPose,
+            targetPose,
+            nextPose,
+            segmentEased,
+          ),
+        );
+
+        onUpdate({
+          progress: totalDuration ? elapsed / totalDuration : 1,
+          segmentIndex: activeIndex,
+          segmentProgress,
+          segmentEased,
+        });
+
+        if (elapsed < totalDuration) {
+          window.requestAnimationFrame(tick);
+          return;
+        }
+
+        this.setPose(activeSegment.pose);
+        onUpdate({
+          progress: 1,
+          segmentIndex: normalizedSegments.length - 1,
+          segmentProgress: 1,
+          segmentEased: 1,
+        });
         resolve(true);
       };
 

@@ -2,7 +2,7 @@ import { BookStage } from "./book-stage.js";
 import { renderShelfButtons, collectTemplates, populateBookView, syncTriggerState, trapFocus } from "./content.js";
 import { sectionMap, sections } from "./sections.js";
 import { ShelfStage } from "./shelf-stage.js";
-import { easeDock, easeStandard, wait } from "./utils.js";
+import { easeDock, easeStandard } from "./utils.js";
 
 let THREE = null;
 
@@ -47,9 +47,12 @@ if (!siteShell || !bookView || !bookshelf) {
 
   const OPEN_FLOAT_DURATION = 690;
   const OPEN_TURN_DURATION = 660;
+  const OPEN_FRONT_HOLD_DURATION = 150;
   const OPEN_COVER_DURATION = 860;
+  const OPEN_READING_DURATION = 250;
   const CLOSE_COVER_DURATION = 620;
   const CLOSE_RETURN_DURATION = 760;
+  const CLOSE_RESET_DURATION = 240;
 
   if (THREE && stageHost) {
     bookStage = new BookStage(stageHost, THREE);
@@ -134,10 +137,12 @@ if (!siteShell || !bookView || !bookshelf) {
     bookView.setAttribute("aria-hidden", "false");
     bookView.classList.remove("is-content-visible", "is-simple");
     bookView.classList.add("is-visible");
+    setContentProgress(0);
 
     if (shouldSimplifyMotion()) {
       setShelfVacancy(sectionId);
       bookView.classList.add("is-simple", "is-content-visible");
+      setContentProgress(1);
       closeButton?.focus();
       return;
     }
@@ -164,44 +169,43 @@ if (!siteShell || !bookView || !bookshelf) {
     });
 
     if (use3d && trigger && bookStage) {
-      const triggerRect = trigger.getBoundingClientRect();
-      const shelfPose = bookStage.createShelfPose(triggerRect);
+      const shelfTarget = getShelfDockTarget(sectionId, trigger.getBoundingClientRect());
+      const shelfPose = bookStage.createShelfPose(shelfTarget);
       const spinePose = bookStage.createSpinePose(shelfPose);
       const frontPose = bookStage.createFrontPose();
       const openPose = bookStage.createOpenPose();
 
+      if (!isCloseTokenCurrent(token)) {
+        return;
+      }
+
       bookView.classList.remove("is-content-visible");
-      await wait(40);
+      await bookStage.animateTimeline(
+        [
+          { pose: openPose, duration: CLOSE_RESET_DURATION, easing: easeStandard },
+          { pose: frontPose, duration: CLOSE_COVER_DURATION, easing: easeStandard },
+          { pose: spinePose, duration: CLOSE_COVER_DURATION * 0.9, easing: easeStandard },
+          { pose: shelfPose, duration: CLOSE_RETURN_DURATION, easing: easeDock },
+        ],
+        token,
+        motionTokenRef,
+        ({ progress }) => {
+          setContentProgress(1 - mapRange(progress, 0, 0.2));
+        },
+      );
 
       if (!isCloseTokenCurrent(token)) {
         return;
       }
 
-      await bookStage.animateTo(openPose, 260, easeStandard, token, motionTokenRef);
-
-      if (!isCloseTokenCurrent(token)) {
-        return;
-      }
-
-      await bookStage.animateTo(frontPose, CLOSE_COVER_DURATION, easeStandard, token, motionTokenRef);
-
-      if (!isCloseTokenCurrent(token)) {
-        return;
-      }
-
-      await bookStage.animateTo(spinePose, CLOSE_COVER_DURATION * 0.9, easeStandard, token, motionTokenRef);
-
-      if (!isCloseTokenCurrent(token)) {
-        return;
-      }
-
-      await bookStage.animateTo(shelfPose, CLOSE_RETURN_DURATION, easeDock, token, motionTokenRef);
+      await waitForPaint();
 
       if (!isCloseTokenCurrent(token)) {
         return;
       }
     } else {
       bookView.classList.remove("is-content-visible", "is-simple");
+      setContentProgress(0);
     }
 
     teardownOverlay(trigger);
@@ -210,6 +214,7 @@ if (!siteShell || !bookView || !bookshelf) {
   async function runOpenSequence(sectionId, triggerRect, token) {
     if (!bookStage) {
       bookView.classList.add("is-simple", "is-content-visible");
+      setContentProgress(1);
       closeButton?.focus();
       return;
     }
@@ -217,42 +222,39 @@ if (!siteShell || !bookView || !bookshelf) {
     await (document.fonts?.ready ?? Promise.resolve()).catch(() => undefined);
     bookStage.resize();
     bookStage.setReadingMode(false);
-    const shelfPose = bookStage.createShelfPose(triggerRect);
+    const shelfTarget = getShelfDockTarget(sectionId, triggerRect);
+    const shelfPose = bookStage.createShelfPose(shelfTarget);
     const floatPose = bookStage.createFloatPose(shelfPose);
     const frontPose = bookStage.createFrontPose();
     const openPose = bookStage.createOpenPose();
+    const readingPose = bookStage.createReadingPose();
 
     bookStage.setPose(shelfPose);
     setShelfVacancy(sectionId);
-
-    await bookStage.animateTo(floatPose, OPEN_FLOAT_DURATION, easeStandard, token, motionTokenRef);
-
-    if (!isMotionCurrent(token, sectionId)) {
-      return;
-    }
-
-    await bookStage.animateTo(frontPose, OPEN_TURN_DURATION, easeStandard, token, motionTokenRef);
+    setContentProgress(0);
+    await waitForPaint();
 
     if (!isMotionCurrent(token, sectionId)) {
       return;
     }
 
-    await wait(80);
-
-    if (!isMotionCurrent(token, sectionId)) {
-      return;
-    }
-
-    await bookStage.animateTo(openPose, OPEN_COVER_DURATION, easeStandard, token, motionTokenRef);
-
-    if (!isMotionCurrent(token, sectionId)) {
-      return;
-    }
-
-    bookView.classList.add("is-content-visible");
-    await bookStage.animateTo(bookStage.createReadingPose(), 260, easeStandard, token, motionTokenRef);
+    await bookStage.animateTimeline(
+      [
+        { pose: floatPose, duration: OPEN_FLOAT_DURATION, easing: easeStandard },
+        { pose: frontPose, duration: OPEN_TURN_DURATION, easing: easeStandard },
+        { pose: frontPose, duration: OPEN_FRONT_HOLD_DURATION, easing: easeStandard },
+        { pose: openPose, duration: OPEN_COVER_DURATION, easing: easeStandard },
+        { pose: readingPose, duration: OPEN_READING_DURATION, easing: easeStandard },
+      ],
+      token,
+      motionTokenRef,
+      ({ progress }) => {
+        setContentProgress(mapRange(progress, 0.6, 0.9));
+      },
+    );
 
     if (isMotionCurrent(token, sectionId)) {
+      setContentProgress(1);
       bookView.classList.add("is-content-visible");
       closeButton?.focus();
     }
@@ -272,18 +274,16 @@ if (!siteShell || !bookView || !bookshelf) {
 
     document.body.classList.remove("view-open");
     siteShell.removeAttribute("aria-hidden");
+    bookView.hidden = true;
+    setContentProgress(0);
+    leftSlot.replaceChildren();
+    rightSlot.replaceChildren();
+    isClosing = false;
+    setShelfVacancy(null);
 
-    hideTimer = window.setTimeout(() => {
-      bookView.hidden = true;
-      leftSlot.replaceChildren();
-      rightSlot.replaceChildren();
-      isClosing = false;
-      setShelfVacancy(null);
-
-      if (trigger) {
-        trigger.focus();
-      }
-    }, 40);
+    if (trigger) {
+      trigger.focus();
+    }
   }
 
   function setShelfVacancy(sectionId) {
@@ -300,6 +300,36 @@ if (!siteShell || !bookView || !bookshelf) {
 
   function shouldUse3D() {
     return Boolean(bookStage && bookStage.isReady);
+  }
+
+  function getShelfDockTarget(sectionId, fallbackRect) {
+    return shelfStage?.getEntryProjection(sectionId) || fallbackRect;
+  }
+
+  function setContentProgress(progress) {
+    const clamped = Math.max(0, Math.min(progress, 1));
+    bookView.style.setProperty("--content-progress", clamped.toFixed(4));
+    bookView.style.setProperty("--topline-progress", Math.min(clamped * 1.08, 1).toFixed(4));
+  }
+
+  function mapRange(value, start, end) {
+    if (value <= start) {
+      return 0;
+    }
+
+    if (value >= end) {
+      return 1;
+    }
+
+    return (value - start) / (end - start);
+  }
+
+  function waitForPaint() {
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(resolve);
+      });
+    });
   }
 
   function isMotionCurrent(token, sectionId) {

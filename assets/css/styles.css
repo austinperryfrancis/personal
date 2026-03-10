@@ -7,6 +7,8 @@
   --book-depth: clamp(1.55rem, 2.3vw, 2.05rem);
   --volume-width: 320px;
   --volume-height: 560px;
+  --content-progress: 0;
+  --topline-progress: 0;
   position: fixed;
   inset: 0;
   display: grid;
@@ -27,9 +29,8 @@
 .book-view__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(20, 16, 13, 0.22);
-  opacity: 0;
-  transition: opacity 260ms var(--ease-standard);
+  background: transparent;
+  opacity: 1;
 }
 
 .book-view.is-visible .book-view__scrim {
@@ -660,18 +661,14 @@
 .book-view__topline {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  transform: translateY(-0.45rem);
-  transition:
-    opacity 220ms ease,
-    transform 280ms var(--ease-standard);
+  opacity: var(--topline-progress);
+  transform: translateY(calc((1 - var(--topline-progress)) * -0.45rem));
   pointer-events: none;
 }
 
 .book-view.is-content-visible .book-view__topline,
 .book-view.is-simple .book-view__topline {
-  opacity: 1;
-  transform: none;
+  pointer-events: auto;
 }
 
 .book-stage {
@@ -715,12 +712,9 @@
   border-radius: 0;
   background: none;
   box-shadow: none;
-  opacity: 0;
-  transform: translate(-50%, 1rem) scale(0.986);
+  opacity: var(--content-progress);
+  transform: translate(-50%, calc((1 - var(--content-progress)) * 1rem)) scale(calc(0.986 + (var(--content-progress) * 0.014)));
   pointer-events: none;
-  transition:
-    opacity 320ms ease,
-    transform 520ms var(--ease-standard);
 }
 
 .book-content::before {
@@ -729,8 +723,6 @@
 
 .book-view.is-content-visible .book-content,
 .book-view.is-simple .book-content {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
   pointer-events: auto;
 }
 

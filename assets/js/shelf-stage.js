@@ -71,6 +71,8 @@ export class ShelfStage {
     const pageWidth = width - 0.24;
     const pageHeight = height - 0.22;
     const group = new T.Group();
+    const bookGroup = new T.Group();
+    group.add(bookGroup);
 
     const coverMaterial = new T.MeshPhysicalMaterial({
       color: palette.base,
@@ -85,28 +87,28 @@ export class ShelfStage {
       coverMaterial.clone(),
     );
     backCover.position.z = -depth / 2 + coverThickness / 2;
-    group.add(backCover);
+    bookGroup.add(backCover);
 
     const spine = new T.Mesh(
       new T.BoxGeometry(coverThickness, height, depth),
       coverMaterial.clone(),
     );
     spine.position.set(-width / 2 + coverThickness / 2, 0, 0);
-    group.add(spine);
+    bookGroup.add(spine);
 
     const pageBlock = new T.Mesh(
       new T.BoxGeometry(pageWidth, pageHeight, this.dimensions.pageThickness),
       new T.MeshStandardMaterial({ color: palette.page, roughness: 0.94 }),
     );
     pageBlock.position.set(0.06, 0, -0.02);
-    group.add(pageBlock);
+    bookGroup.add(pageBlock);
 
     const frontCover = new T.Mesh(
       new T.BoxGeometry(width, height, coverThickness),
       coverMaterial.clone(),
     );
     frontCover.position.set(0, 0, depth / 2 - coverThickness / 2);
-    group.add(frontCover);
+    bookGroup.add(frontCover);
 
     const frontArtwork = new T.Mesh(
       new T.PlaneGeometry(width * 0.985, height * 0.985),
@@ -117,7 +119,7 @@ export class ShelfStage {
       }),
     );
     frontArtwork.position.set(0, 0, depth / 2 + 0.008);
-    group.add(frontArtwork);
+    bookGroup.add(frontArtwork);
 
     const spineArtwork = new T.Mesh(
       new T.PlaneGeometry(depth * 0.98, height * 0.96),
@@ -129,7 +131,7 @@ export class ShelfStage {
     );
     spineArtwork.rotation.y = -Math.PI / 2;
     spineArtwork.position.set(-width / 2 - 0.008, 0, 0);
-    group.add(spineArtwork);
+    bookGroup.add(spineArtwork);
 
     const shadow = this.createShadow();
     shadow.position.set(0, -height / 2 - 0.46, 0.1);
@@ -153,7 +155,7 @@ export class ShelfStage {
       material.needsUpdate = true;
     });
 
-    return { group, button, materials };
+    return { group, bookGroup, button, materials };
   }
 
   createShadow() {
@@ -252,7 +254,7 @@ export class ShelfStage {
     this.entries.forEach((entry, key) => {
       if (sectionId && key === sectionId) {
         this.setEntryOpacity(entry, 0);
-        entry.group.visible = false;
+        entry.group.visible = true;
         return;
       }
 
@@ -260,6 +262,61 @@ export class ShelfStage {
       this.setEntryOpacity(entry, 1);
     });
     this.render();
+  }
+
+  getEntryProjection(sectionId) {
+    const entry = this.entries.get(sectionId);
+    const hostRect = this.host.getBoundingClientRect();
+
+    if (!entry || !hostRect.width || !hostRect.height) {
+      return null;
+    }
+
+    this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld();
+    this.root.updateWorldMatrix(true, true);
+    entry.bookGroup.updateWorldMatrix(true, true);
+
+    const center = this.projectPoint(new this.THREE.Vector3(0, 0, 0), entry.bookGroup, hostRect);
+    const top = this.projectPoint(
+      new this.THREE.Vector3(0, this.dimensions.height / 2, 0),
+      entry.bookGroup,
+      hostRect,
+    );
+    const bottom = this.projectPoint(
+      new this.THREE.Vector3(0, -this.dimensions.height / 2, 0),
+      entry.bookGroup,
+      hostRect,
+    );
+    const left = this.projectPoint(
+      new this.THREE.Vector3(-this.dimensions.width / 2, 0, 0),
+      entry.bookGroup,
+      hostRect,
+    );
+    const right = this.projectPoint(
+      new this.THREE.Vector3(this.dimensions.width / 2, 0, 0),
+      entry.bookGroup,
+      hostRect,
+    );
+
+    return {
+      centerX: center.x,
+      centerY: center.y,
+      height: Math.abs(bottom.y - top.y),
+      width: Math.abs(right.x - left.x),
+      rotation: { ...SHELF_ROTATION },
+      scale: entry.group.scale.x,
+    };
+  }
+
+  projectPoint(localPoint, parent, hostRect) {
+    const point = localPoint.clone().applyMatrix4(parent.matrixWorld);
+    point.project(this.camera);
+
+    return {
+      x: hostRect.left + ((point.x + 1) * 0.5) * hostRect.width,
+      y: hostRect.top + ((1 - point.y) * 0.5) * hostRect.height,
+    };
   }
 
   setEntryOpacity(entry, opacity) {
