@@ -43,95 +43,6 @@
           <div class="shelf-frame">
             <div class="bookshelf" role="list" aria-label="Site sections">
               <div class="bookshelf__stage" id="shelf-stage" aria-hidden="true"></div>
-              <button
-                class="book book--hit tone-navy"
-                type="button"
-                role="listitem"
-                data-section="about"
-                aria-controls="book-view"
-                aria-expanded="false"
-                aria-haspopup="dialog"
-                style="--book-width: 5.4rem; --book-height: 23.5rem;"
-              >
-                <span class="book__band book__band--top" aria-hidden="true"></span>
-                <span class="book__band book__band--mid" aria-hidden="true"></span>
-                <span class="book__title">About</span>
-              </button>
-
-              <button
-                class="book book--hit tone-oxblood"
-                type="button"
-                role="listitem"
-                data-section="research"
-                aria-controls="book-view"
-                aria-expanded="false"
-                aria-haspopup="dialog"
-                style="--book-width: 5.95rem; --book-height: 24rem;"
-              >
-                <span class="book__band book__band--top" aria-hidden="true"></span>
-                <span class="book__band book__band--mid" aria-hidden="true"></span>
-                <span class="book__title">Research</span>
-              </button>
-
-              <button
-                class="book book--hit tone-green"
-                type="button"
-                role="listitem"
-                data-section="projects"
-                aria-controls="book-view"
-                aria-expanded="false"
-                aria-haspopup="dialog"
-                style="--book-width: 5.55rem; --book-height: 23.2rem;"
-              >
-                <span class="book__band book__band--top" aria-hidden="true"></span>
-                <span class="book__band book__band--mid" aria-hidden="true"></span>
-                <span class="book__title">Projects</span>
-              </button>
-
-              <button
-                class="book book--hit tone-brown"
-                type="button"
-                role="listitem"
-                data-section="writing"
-                aria-controls="book-view"
-                aria-expanded="false"
-                aria-haspopup="dialog"
-                style="--book-width: 5.15rem; --book-height: 23.9rem;"
-              >
-                <span class="book__band book__band--top" aria-hidden="true"></span>
-                <span class="book__band book__band--mid" aria-hidden="true"></span>
-                <span class="book__title">Writing</span>
-              </button>
-
-              <button
-                class="book book--hit tone-sand"
-                type="button"
-                role="listitem"
-                data-section="photography"
-                aria-controls="book-view"
-                aria-expanded="false"
-                aria-haspopup="dialog"
-                style="--book-width: 5.5rem; --book-height: 23.45rem;"
-              >
-                <span class="book__band book__band--top" aria-hidden="true"></span>
-                <span class="book__band book__band--mid" aria-hidden="true"></span>
-                <span class="book__title">Photography</span>
-              </button>
-
-              <button
-                class="book book--hit tone-charcoal"
-                type="button"
-                role="listitem"
-                data-section="contact"
-                aria-controls="book-view"
-                aria-expanded="false"
-                aria-haspopup="dialog"
-                style="--book-width: 4.95rem; --book-height: 22.9rem;"
-              >
-                <span class="book__band book__band--top" aria-hidden="true"></span>
-                <span class="book__band book__band--mid" aria-hidden="true"></span>
-                <span class="book__title">Contact</span>
-              </button>
             </div>
           </div>
 
@@ -171,14 +82,7 @@
       </div>
     </div>
 
-    <template
-      id="template-about"
-      data-section="about"
-      data-index="Profile"
-      data-kicker="About"
-      data-title="About"
-      data-subtitle="An editorial introduction to research interests, methods, and ongoing work."
-    >
+    <template id="template-about" data-section="about">
       <div data-page="left">
         <div class="profile-card">
           <div class="profile-card__monogram" aria-hidden="true">AF</div>
@@ -228,14 +132,7 @@
       </div>
     </template>
 
-    <template
-      id="template-research"
-      data-section="research"
-      data-index="Research & CV"
-      data-kicker="Research"
-      data-title="Research / CV"
-      data-subtitle="Areas of inquiry, selected papers, and a place to add a downloadable curriculum vitae."
-    >
+    <template id="template-research" data-section="research">
       <div data-page="left">
         <div class="page-block">
           <p class="page-kicker">Current agenda</p>
@@ -281,14 +178,7 @@
       </div>
     </template>
 
-    <template
-      id="template-projects"
-      data-section="projects"
-      data-index="Projects"
-      data-kicker="Projects"
-      data-title="Projects"
-      data-subtitle="Selected software, research tools, and design experiments with a clear editorial frame."
-    >
+    <template id="template-projects" data-section="projects">
       <div data-page="left">
         <div class="page-block">
           <p class="page-kicker">Featured work</p>
@@ -328,14 +218,7 @@
       </div>
     </template>
 
-    <template
-      id="template-writing"
-      data-section="writing"
-      data-index="Writing"
-      data-kicker="Writing"
-      data-title="Writing"
-      data-subtitle="Essays, shorter notes, and a slower archive of finished and in-progress writing."
-    >
+    <template id="template-writing" data-section="writing">
       <div data-page="left">
         <div class="page-block">
           <p class="page-kicker">Recent essays</p>
@@ -369,14 +252,7 @@
       </div>
     </template>
 
-    <template
-      id="template-photography"
-      data-section="photography"
-      data-index="Photography"
-      data-kicker="Photography"
-      data-title="Photography"
-      data-subtitle="A restrained image portfolio for field notes, landscapes, and close observation."
-    >
+    <template id="template-photography" data-section="photography">
       <div data-page="left">
         <div class="page-block">
           <p class="page-kicker">Practice</p>
@@ -414,14 +290,7 @@
       </div>
     </template>
 
-    <template
-      id="template-contact"
-      data-section="contact"
-      data-index="Contact"
-      data-kicker="Contact"
-      data-title="Contact"
-      data-subtitle="A clear, minimal place for correspondence, collaboration notes, and public profiles."
-    >
+    <template id="template-contact" data-section="contact">
       <div data-page="left">
         <div class="page-block">
           <p class="page-kicker">Correspondence</p>

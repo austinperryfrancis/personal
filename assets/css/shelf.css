@@ -1,0 +1,289 @@
+.shelf-frame {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: clamp(1rem, 2.4vw, 1.35rem);
+  border-radius: 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 22%),
+    linear-gradient(180deg, #7a5336, #5f402b 42%, #5a3a25 100%);
+  box-shadow:
+    0 10px 20px rgba(99, 63, 36, 0.18),
+    0 28px 60px rgba(56, 39, 28, 0.24);
+}
+
+.shelf-frame::before,
+.shelf-frame::after {
+  content: "";
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.08));
+}
+
+.shelf-frame::before {
+  top: 0.75rem;
+  opacity: 0.35;
+}
+
+.shelf-frame::after {
+  bottom: 0.8rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.bookshelf {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  gap: 0;
+  min-height: clamp(17rem, 44vw, 29rem);
+  padding: clamp(2rem, 4.5vw, 3.4rem) clamp(0.18rem, 0.7vw, 0.35rem) clamp(2.1rem, 5vw, 3rem);
+  border-radius: 1.05rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 26%),
+    linear-gradient(180deg, #2d241e, #261f1a 36%, #211a15 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -20px 24px rgba(0, 0, 0, 0.2),
+    inset 18px 0 22px rgba(0, 0, 0, 0.14),
+    inset -18px 0 22px rgba(0, 0, 0, 0.14);
+}
+
+.bookshelf::after {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  right: 0.7rem;
+  bottom: 1rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.05));
+}
+
+.bookshelf__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bookshelf__stage canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.book {
+  --book-color-1: #314255;
+  --book-color-2: #1d2736;
+  --book-color-3: #141a25;
+  --book-spine-highlight: rgba(255, 255, 255, 0.12);
+  --book-edge-shadow: rgba(0, 0, 0, 0.22);
+  --book-title: #efe6d2;
+  position: relative;
+  width: min(var(--book-width), 14vw);
+  height: min(var(--book-height), 66vw);
+  padding: 1.1rem 0.55rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.75rem 0.95rem 0.95rem 0.72rem;
+  cursor: pointer;
+  color: var(--book-title);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14), transparent 10%, transparent 86%, rgba(0, 0, 0, 0.18)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 32%),
+    linear-gradient(180deg, var(--book-color-1), var(--book-color-2) 46%, var(--book-color-3));
+  box-shadow:
+    inset 1px 0 0 var(--book-spine-highlight),
+    inset -9px 0 16px rgba(0, 0, 0, 0.16),
+    0 16px 22px rgba(0, 0, 0, 0.24);
+  transition:
+    transform 320ms var(--ease-standard),
+    box-shadow 320ms var(--ease-standard),
+    filter 320ms var(--ease-standard);
+}
+
+.book::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.book::after {
+  content: "";
+  position: absolute;
+  inset: 0.35rem auto 0.35rem 0.24rem;
+  width: 0.26rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.12));
+  opacity: 0.8;
+}
+
+.book:hover,
+.book:focus-visible,
+.book.book--active {
+  transform: translateY(-0.55rem);
+  box-shadow:
+    inset 1px 0 0 var(--book-spine-highlight),
+    inset -11px 0 18px rgba(0, 0, 0, 0.18),
+    0 24px 30px rgba(0, 0, 0, 0.28);
+}
+
+.book.book--vacant {
+  transform: none;
+  color: transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 22%),
+    linear-gradient(180deg, rgba(17, 13, 10, 0.62), rgba(10, 8, 6, 0.78));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 18px 22px rgba(255, 255, 255, 0.02),
+    inset 0 -20px 26px rgba(0, 0, 0, 0.42);
+}
+
+.book.book--vacant::before {
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+.book.book--vacant::after,
+.book.book--vacant .book__band,
+.book.book--vacant .book__title,
+.book.book--vacant .book__author {
+  opacity: 0;
+}
+
+.book.book--vacant:hover,
+.book.book--vacant:focus-visible {
+  transform: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 18px 22px rgba(255, 255, 255, 0.02),
+    inset 0 -20px 26px rgba(0, 0, 0, 0.42);
+}
+
+.book:focus-visible,
+.book-view__close:focus-visible,
+.inline-link:focus-visible {
+  outline: 2px solid rgba(56, 38, 22, 0.85);
+  outline-offset: 3px;
+}
+
+body.has-shelf-stage .bookshelf .book--hit {
+  z-index: 1;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+  transform: none;
+}
+
+body.has-shelf-stage .bookshelf .book--hit::before,
+body.has-shelf-stage .bookshelf .book--hit::after,
+body.has-shelf-stage .bookshelf .book--hit .book__band,
+body.has-shelf-stage .bookshelf .book--hit .book__title,
+body.has-shelf-stage .bookshelf .book--hit .book__author {
+  opacity: 0;
+}
+
+body.has-shelf-stage .bookshelf .book--hit:hover,
+body.has-shelf-stage .bookshelf .book--hit:focus-visible,
+body.has-shelf-stage .bookshelf .book--hit.book--active,
+body.has-shelf-stage .bookshelf .book--hit.book--vacant {
+  transform: none;
+  box-shadow: none;
+}
+
+.book__band {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(242, 225, 195, 0.68), transparent);
+  opacity: 0.9;
+}
+
+.book__band--top {
+  top: 2.2rem;
+}
+
+.book__band--mid {
+  bottom: 3.35rem;
+}
+
+.book__title {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2vw, 1.55rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.book__author {
+  position: absolute;
+  bottom: 1rem;
+  left: 0.55rem;
+  right: 0.55rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(244, 236, 224, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tone-navy {
+  --book-color-1: #465a72;
+  --book-color-2: #243348;
+  --book-color-3: #151d29;
+  --book-title: #f2e7d2;
+  --book-spine-highlight: rgba(255, 255, 255, 0.14);
+}
+
+.tone-oxblood {
+  --book-color-1: #8c4951;
+  --book-color-2: #5b252d;
+  --book-color-3: #341317;
+  --book-title: #f3e1d6;
+}
+
+.tone-green {
+  --book-color-1: #5a6b58;
+  --book-color-2: #314235;
+  --book-color-3: #1f2b21;
+  --book-title: #efe6cf;
+}
+
+.tone-brown {
+  --book-color-1: #8a6647;
+  --book-color-2: #5f4029;
+  --book-color-3: #392416;
+  --book-title: #f2e4cf;
+}
+
+.tone-sand {
+  --book-color-1: #b89b72;
+  --book-color-2: #957651;
+  --book-color-3: #65482e;
+  --book-title: #1f1914;
+  --book-spine-highlight: rgba(255, 255, 255, 0.22);
+}
+
+.tone-charcoal {
+  --book-color-1: #5f5c59;
+  --book-color-2: #363434;
+  --book-color-3: #1f1e1f;
+  --book-title: #f1ebdf;
+}

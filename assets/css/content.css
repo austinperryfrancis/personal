@@ -1,0 +1,220 @@
+.page-block,
+.callout,
+.profile-card,
+.project-card,
+.meta-grid__item {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid rgba(69, 54, 40, 0.1);
+  border-radius: 1.15rem;
+  background: rgba(255, 253, 249, 0.55);
+  box-shadow: 0 14px 22px rgba(50, 35, 24, 0.06);
+}
+
+.profile-card__monogram {
+  width: 4.6rem;
+  height: 4.6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  background: linear-gradient(180deg, #f0e8dc, #d9ccbb);
+  color: #34281f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.profile-card__name,
+.project-card__title,
+.entry-list__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.28rem;
+  line-height: 1.1;
+}
+
+.profile-card__role,
+.profile-card__meta,
+.project-card__copy,
+.entry-list__meta,
+.page-copy,
+.meta-grid__value,
+.page-list,
+.callout__copy,
+.inline-link {
+  margin: 0;
+  color: rgba(31, 27, 23, 0.76);
+  line-height: 1.72;
+}
+
+.profile-card__role {
+  margin-top: 0.2rem;
+}
+
+.page-heading {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 1.08;
+}
+
+.page-copy + .page-copy {
+  margin-top: 0.8rem;
+}
+
+.page-list,
+.entry-list {
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.entry-list {
+  margin: 0;
+}
+
+.entry-list li::marker,
+.page-list li::marker {
+  color: rgba(88, 64, 45, 0.42);
+}
+
+.callout {
+  padding: 1rem 1.1rem;
+  border-left: 2px solid rgba(86, 65, 47, 0.22);
+  background: rgba(255, 252, 245, 0.56);
+}
+
+.meta-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.meta-grid__item {
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(64, 49, 36, 0.12);
+}
+
+.meta-grid__value {
+  margin-top: 0.3rem;
+}
+
+.project-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(64, 49, 36, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 252, 245, 0.52);
+}
+
+.project-card + .project-card {
+  margin-top: 0.75rem;
+}
+
+.photo-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-height: 100%;
+}
+
+.photo-tile {
+  position: relative;
+  min-height: 10.5rem;
+  border-radius: 1rem;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, transparent 28%, rgba(25, 19, 14, 0.16) 100%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.38), transparent 30%),
+    linear-gradient(135deg, #cbb69c, #9a7d5f 52%, #4b3726);
+}
+
+.photo-tile:nth-child(2) {
+  background:
+    linear-gradient(180deg, transparent 26%, rgba(25, 19, 14, 0.14) 100%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.34), transparent 30%),
+    linear-gradient(135deg, #909ea7, #66757d 52%, #33424d);
+}
+
+.photo-tile:nth-child(3) {
+  background:
+    linear-gradient(180deg, transparent 26%, rgba(25, 19, 14, 0.14) 100%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.28), transparent 32%),
+    linear-gradient(135deg, #c9b3a4, #8e7363 48%, #4d3c30);
+}
+
+.photo-tile:nth-child(4) {
+  background:
+    linear-gradient(180deg, transparent 26%, rgba(25, 19, 14, 0.14) 100%),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.28), transparent 28%),
+    linear-gradient(135deg, #bfb29a, #8f826e 54%, #574835);
+}
+
+.photo-tile--wide {
+  grid-column: span 2;
+}
+
+.photo-tile__caption {
+  position: absolute;
+  left: 0.9rem;
+  right: 0.9rem;
+  bottom: 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 251, 245, 0.85);
+}
+
+.inline-link {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  color: var(--ink);
+}
+
+html.no-js .library__summary::after {
+  content: " JavaScript is required for the opening transition.";
+}
+
+.spread__page-header {
+  display: grid;
+  gap: 1rem;
+  max-width: 31rem;
+  margin: 0 auto;
+}
+
+.spread__page-kicker,
+.spread__page-signature {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(44, 34, 26, 0.54);
+}
+
+.spread__page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 6vw, 5.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+}
+
+.spread__page-subtitle {
+  margin: 0;
+  max-width: 30rem;
+  color: rgba(31, 27, 23, 0.72);
+  line-height: 1.75;
+}
+
+.spread__section + .spread__section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(97, 76, 55, 0.12);
+}
