@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Austin Francis</title>
+    <meta
+      name="description"
+      content="Austin Francis: research, writing, projects, and photography presented through a refined bookshelf-inspired personal website."
+    >
+    <meta name="theme-color" content="#ece4d8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,700&display=swap"
+      rel="stylesheet"
+    >
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script>
+      document.documentElement.classList.remove("no-js");
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <div class="site-shell">
+      <header class="hero" aria-labelledby="site-title">
+        <h1 class="hero__title" id="site-title">Austin Francis</h1>
+        <p class="hero__subtitle">A curated portfolio</p>
+      </header>
+
+      <main id="main-content" class="main-content">
+        <section class="library" aria-labelledby="library-heading">
+          <h2 class="visually-hidden" id="library-heading">Site sections</h2>
+
+          <div class="shelf-frame">
+            <div class="bookshelf" role="list" aria-label="Site sections">
+              <div class="bookshelf__stage" id="shelf-stage" aria-hidden="true"></div>
+              <button
+                class="book book--hit tone-navy"
+                type="button"
+                role="listitem"
+                data-section="about"
+                aria-controls="book-view"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                style="--book-width: 5.4rem; --book-height: 23.5rem;"
+              >
+                <span class="book__band book__band--top" aria-hidden="true"></span>
+                <span class="book__band book__band--mid" aria-hidden="true"></span>
+                <span class="book__title">About</span>
+              </button>
+
+              <button
+                class="book book--hit tone-oxblood"
+                type="button"
+                role="listitem"
+                data-section="research"
+                aria-controls="book-view"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                style="--book-width: 5.95rem; --book-height: 24rem;"
+              >
+                <span class="book__band book__band--top" aria-hidden="true"></span>
+                <span class="book__band book__band--mid" aria-hidden="true"></span>
+                <span class="book__title">Research</span>
+              </button>
+
+              <button
+                class="book book--hit tone-green"
+                type="button"
+                role="listitem"
+                data-section="projects"
+                aria-controls="book-view"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                style="--book-width: 5.55rem; --book-height: 23.2rem;"
+              >
+                <span class="book__band book__band--top" aria-hidden="true"></span>
+                <span class="book__band book__band--mid" aria-hidden="true"></span>
+                <span class="book__title">Projects</span>
+              </button>
+
+              <button
+                class="book book--hit tone-brown"
+                type="button"
+                role="listitem"
+                data-section="writing"
+                aria-controls="book-view"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                style="--book-width: 5.15rem; --book-height: 23.9rem;"
+              >
+                <span class="book__band book__band--top" aria-hidden="true"></span>
+                <span class="book__band book__band--mid" aria-hidden="true"></span>
+                <span class="book__title">Writing</span>
+              </button>
+
+              <button
+                class="book book--hit tone-sand"
+                type="button"
+                role="listitem"
+                data-section="photography"
+                aria-controls="book-view"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                style="--book-width: 5.5rem; --book-height: 23.45rem;"
+              >
+                <span class="book__band book__band--top" aria-hidden="true"></span>
+                <span class="book__band book__band--mid" aria-hidden="true"></span>
+                <span class="book__title">Photography</span>
+              </button>
+
+              <button
+                class="book book--hit tone-charcoal"
+                type="button"
+                role="listitem"
+                data-section="contact"
+                aria-controls="book-view"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                style="--book-width: 4.95rem; --book-height: 22.9rem;"
+              >
+                <span class="book__band book__band--top" aria-hidden="true"></span>
+                <span class="book__band book__band--mid" aria-hidden="true"></span>
+                <span class="book__title">Contact</span>
+              </button>
+            </div>
+          </div>
+
+        </section>
+      </main>
+    </div>
+
+    <div class="book-view" id="book-view" hidden aria-hidden="true">
+      <div class="book-view__scrim" data-close></div>
+      <div class="book-view__dialog" role="dialog" aria-modal="true" aria-labelledby="book-view-title">
+        <div class="book-view__topline">
+          <p class="book-view__index" id="book-view-index">Section</p>
+          <button class="book-view__close" type="button" data-close>Return to shelf</button>
+        </div>
+
+        <div class="book-stage" aria-hidden="true">
+          <div class="book-stage__viewport" id="book-stage"></div>
+        </div>
+
+        <div class="book-content" id="book-content">
+          <div class="book-content__header">
+            <p class="book-content__kicker" id="book-view-kicker">Profile</p>
+            <div class="book-content__title-group">
+              <h2 class="book-content__title" id="book-view-title">About</h2>
+              <p class="book-content__subtitle" id="book-view-subtitle">
+                A concise introduction, current interests, and selected links.
+              </p>
+            </div>
+            <p class="book-content__signature" id="book-view-signature">Austin Francis</p>
+          </div>
+
+          <div class="spread">
+            <article class="spread__page" data-slot="left"></article>
+            <article class="spread__page" data-slot="right"></article>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <template
+      id="template-about"
+      data-section="about"
+      data-index="Profile"
+      data-kicker="About"
+      data-title="About"
+      data-subtitle="An editorial introduction to research interests, methods, and ongoing work."
+    >
+      <div data-page="left">
+        <div class="profile-card">
+          <div class="profile-card__monogram" aria-hidden="true">AF</div>
+          <div class="profile-card__copy">
+            <p class="profile-card__name">Austin Francis</p>
+            <p class="profile-card__role">Researcher, writer, and builder</p>
+            <p class="profile-card__meta">Based in Chicago, working across digital scholarship, software, and public-facing research tools.</p>
+          </div>
+        </div>
+
+        <div class="page-block">
+          <p class="page-kicker">Current interests</p>
+          <ul class="page-list">
+            <li>Computational methods for historical and cultural analysis</li>
+            <li>Carefully designed software for research communication</li>
+            <li>Writing that moves between technical clarity and public readability</li>
+          </ul>
+        </div>
+      </div>
+
+      <div data-page="right">
+        <div class="page-block">
+          <p class="page-kicker">Overview</p>
+          <h3 class="page-heading">Quietly ambitious work, presented with restraint.</h3>
+          <p class="page-copy">
+            My practice brings together research, writing, and product-minded technical work. I care about projects that are methodologically rigorous, visually precise, and legible to more than one audience.
+          </p>
+          <p class="page-copy">
+            This site is designed as a working library rather than a stream of updates. Each section holds a different mode of work: published writing, selected projects, developing ideas, and reference material that can be expanded over time.
+          </p>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-grid__item">
+            <p class="meta-grid__label">Focus</p>
+            <p class="meta-grid__value">Research design, digital methods, editorial presentation</p>
+          </div>
+          <div class="meta-grid__item">
+            <p class="meta-grid__label">Formats</p>
+            <p class="meta-grid__value">Essays, prototypes, data tools, lectures</p>
+          </div>
+          <div class="meta-grid__item">
+            <p class="meta-grid__label">Next step</p>
+            <p class="meta-grid__value">Replace this text with a concise biography and current institutional affiliation.</p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template
+      id="template-research"
+      data-section="research"
+      data-index="Research & CV"
+      data-kicker="Research"
+      data-title="Research / CV"
+      data-subtitle="Areas of inquiry, selected papers, and a place to add a downloadable curriculum vitae."
+    >
+      <div data-page="left">
+        <div class="page-block">
+          <p class="page-kicker">Current agenda</p>
+          <h3 class="page-heading">Methods-led work with a public-facing edge.</h3>
+          <p class="page-copy">
+            Current research can be presented here as a short framing statement: the central question, the archive or data involved, and the broader intellectual stakes.
+          </p>
+        </div>
+
+        <div class="page-block">
+          <p class="page-kicker">Selected themes</p>
+          <ul class="page-list">
+            <li>Digital humanities and computational interpretation</li>
+            <li>Archival method, metadata, and historical interfaces</li>
+            <li>Designing scholarly work for broader readerships</li>
+          </ul>
+        </div>
+      </div>
+
+      <div data-page="right">
+        <div class="page-block">
+          <p class="page-kicker">Selected papers</p>
+          <ol class="entry-list">
+            <li>
+              <span class="entry-list__title">Paper title placeholder</span>
+              <span class="entry-list__meta">Journal or conference, 2026</span>
+            </li>
+            <li>
+              <span class="entry-list__title">Working paper placeholder</span>
+              <span class="entry-list__meta">In revision</span>
+            </li>
+            <li>
+              <span class="entry-list__title">Talk or invited lecture placeholder</span>
+              <span class="entry-list__meta">Institution name, 2025</span>
+            </li>
+          </ol>
+        </div>
+
+        <div class="callout">
+          <p class="callout__label">Curriculum vitae</p>
+          <p class="callout__copy">Add a final PDF link here once the public CV is ready for download.</p>
+        </div>
+      </div>
+    </template>
+
+    <template
+      id="template-projects"
+      data-section="projects"
+      data-index="Projects"
+      data-kicker="Projects"
+      data-title="Projects"
+      data-subtitle="Selected software, research tools, and design experiments with a clear editorial frame."
+    >
+      <div data-page="left">
+        <div class="page-block">
+          <p class="page-kicker">Featured work</p>
+          <div class="project-card">
+            <p class="project-card__title">Ancestry Map</p>
+            <p class="project-card__copy">A geospatial storytelling tool that turns genealogical records into a legible animated map with a research-friendly workflow.</p>
+          </div>
+          <div class="project-card">
+            <p class="project-card__title">Editorial Portfolio System</p>
+            <p class="project-card__copy">A static publishing framework for presenting essays, notes, and archival materials with careful typography and reliable performance.</p>
+          </div>
+        </div>
+      </div>
+
+      <div data-page="right">
+        <div class="page-block">
+          <p class="page-kicker">Approach</p>
+          <p class="page-copy">
+            I prefer projects with clear constraints: strong information architecture, durable code, and interfaces that are visually composed rather than merely functional.
+          </p>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-grid__item">
+            <p class="meta-grid__label">Stack</p>
+            <p class="meta-grid__value">Static sites, data pipelines, maps, interfaces</p>
+          </div>
+          <div class="meta-grid__item">
+            <p class="meta-grid__label">Priority</p>
+            <p class="meta-grid__value">Fast load times and long-lived maintainability</p>
+          </div>
+          <div class="meta-grid__item">
+            <p class="meta-grid__label">Replace</p>
+            <p class="meta-grid__value">Swap in screenshots, repositories, and case studies here.</p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template
+      id="template-writing"
+      data-section="writing"
+      data-index="Writing"
+      data-kicker="Writing"
+      data-title="Writing"
+      data-subtitle="Essays, shorter notes, and a slower archive of finished and in-progress writing."
+    >
+      <div data-page="left">
+        <div class="page-block">
+          <p class="page-kicker">Recent essays</p>
+          <ol class="entry-list">
+            <li>
+              <span class="entry-list__title">Designing research tools that invite reading</span>
+              <span class="entry-list__meta">Essay, forthcoming</span>
+            </li>
+            <li>
+              <span class="entry-list__title">What a static personal website can still do well</span>
+              <span class="entry-list__meta">Notebook entry</span>
+            </li>
+            <li>
+              <span class="entry-list__title">On interfaces for public-facing scholarship</span>
+              <span class="entry-list__meta">Lecture draft</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <div data-page="right">
+        <div class="page-block">
+          <p class="page-kicker">Editorial note</p>
+          <p class="page-copy">
+            This section works best as a selective archive rather than a high-frequency feed. A small number of considered pieces will feel more aligned with the rest of the site than a running stream of posts.
+          </p>
+          <p class="page-copy">
+            If you plan to publish longer essays, add a dedicated index page later and keep this opening spread focused on only a few highlighted entries.
+          </p>
+        </div>
+      </div>
+    </template>
+
+    <template
+      id="template-photography"
+      data-section="photography"
+      data-index="Photography"
+      data-kicker="Photography"
+      data-title="Photography"
+      data-subtitle="A restrained image portfolio for field notes, landscapes, and close observation."
+    >
+      <div data-page="left">
+        <div class="page-block">
+          <p class="page-kicker">Practice</p>
+          <h3 class="page-heading">Photography as observation rather than spectacle.</h3>
+          <p class="page-copy">
+            Use this spread to present a short statement about subject matter, process, and the kinds of places or details that return across the work.
+          </p>
+        </div>
+
+        <div class="page-block">
+          <p class="page-kicker">Suggested categories</p>
+          <ul class="page-list">
+            <li>Landscape and built environment</li>
+            <li>Archival objects and material detail</li>
+            <li>Travel notes and study photographs</li>
+          </ul>
+        </div>
+      </div>
+
+      <div data-page="right">
+        <div class="photo-grid" aria-label="Photography placeholders">
+          <div class="photo-tile photo-tile--wide">
+            <span class="photo-tile__caption">Coastal study</span>
+          </div>
+          <div class="photo-tile">
+            <span class="photo-tile__caption">Interior detail</span>
+          </div>
+          <div class="photo-tile">
+            <span class="photo-tile__caption">Roadside light</span>
+          </div>
+          <div class="photo-tile photo-tile--wide">
+            <span class="photo-tile__caption">Archive surface</span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template
+      id="template-contact"
+      data-section="contact"
+      data-index="Contact"
+      data-kicker="Contact"
+      data-title="Contact"
+      data-subtitle="A clear, minimal place for correspondence, collaboration notes, and public profiles."
+    >
+      <div data-page="left">
+        <div class="page-block">
+          <p class="page-kicker">Correspondence</p>
+          <p class="page-copy">
+            For research collaborations, speaking invitations, or project inquiries, add the primary contact details here and keep response expectations clear.
+          </p>
+        </div>
+
+        <div class="callout">
+          <p class="callout__label">Email</p>
+          <a class="inline-link" href="mailto:austin.francis@example.com">austin.francis@example.com</a>
+        </div>
+      </div>
+
+      <div data-page="right">
+        <div class="page-block">
+          <p class="page-kicker">Public profiles</p>
+          <ul class="page-list">
+            <li>Add GitHub, Google Scholar, or LinkedIn links once the final URLs are ready</li>
+            <li>Note whether you are open to consulting, speaking, or editorial collaborations</li>
+            <li>Include a city or time zone if regular meetings matter for your work</li>
+          </ul>
+        </div>
+      </div>
+    </template>
+
+    <script type="module" src="assets/js/main.js"></script>
+  </body>
+</html>
