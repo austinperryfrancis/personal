@@ -362,23 +362,9 @@ export class BookStage {
       return;
     }
 
-    if (this.mode === "overlay") {
-      if (this.activeEntry && this.activeEntry !== entry) {
-        this.activeEntry.root.visible = false;
-        this.activeEntry.root.renderOrder = 0;
-      }
-
-      this.entries.forEach((candidate) => {
-        if (candidate !== entry) {
-          candidate.root.visible = false;
-          candidate.root.renderOrder = 0;
-        }
-      });
-    }
-
     this.activeEntry = entry;
     this.activeEntry.root.visible = true;
-    this.activeEntry.root.renderOrder = 24;
+    this.activeEntry.root.renderOrder = 0;
     this.setActorAnimationMode(this.activeEntry, true);
 
     if (this.pendingMetadata) {
@@ -403,7 +389,9 @@ export class BookStage {
     this.activeEntry = null;
     this.pose = { ...DEFAULT_POSE };
     this.pendingMetadata = null;
-    resolvedEntry.root.visible = this.mode !== "overlay";
+    resolvedEntry.root.visible = this.mode === "overlay"
+      ? false
+      : resolvedEntry.isInViewport && !resolvedEntry.isVacant;
     this.render();
   }
 
@@ -584,6 +572,11 @@ export class BookStage {
       ...pose,
     };
     this.updateActorCollisionBox(entry, entry.shelfPose);
+
+    if (this.activeEntry !== entry) {
+      entry.pose = { ...entry.shelfPose };
+      this.applyPoseToActor(entry, entry.pose, false);
+    }
   }
 
   setShelfOrder(order) {
@@ -596,6 +589,22 @@ export class BookStage {
 
   getShelfOrder() {
     return [...this.shelfOrder];
+  }
+
+  isEntryVisible(sectionId) {
+    const entry = this.entries.get(sectionId);
+    return Boolean(entry?.isInViewport && !entry?.isVacant);
+  }
+
+  setEntryVisible(sectionId, visible) {
+    const entry = this.entries.get(sectionId);
+
+    if (!entry) {
+      return;
+    }
+
+    entry.isInViewport = visible;
+    entry.root.visible = Boolean(visible) && !entry.isVacant;
   }
 
   setVacant(sectionId) {
