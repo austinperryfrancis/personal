@@ -184,7 +184,11 @@ body.has-shelf-stage .bookshelf .book--hit {
   background: transparent;
   box-shadow: none;
   color: transparent;
-  transform: none;
+  pointer-events: none;
+  transform:
+    translate(var(--hit-x, 0px), var(--hit-y, 0px))
+    scale(var(--hit-scale-x, 1), var(--hit-scale-y, 1));
+  transform-origin: top left;
 }
 
 body.has-shelf-stage .bookshelf .book--hit::before,
@@ -199,7 +203,9 @@ body.has-shelf-stage .bookshelf .book--hit:hover,
 body.has-shelf-stage .bookshelf .book--hit:focus-visible,
 body.has-shelf-stage .bookshelf .book--hit.book--active,
 body.has-shelf-stage .bookshelf .book--hit.book--vacant {
-  transform: none;
+  transform:
+    translate(var(--hit-x, 0px), var(--hit-y, 0px))
+    scale(var(--hit-scale-x, 1), var(--hit-scale-y, 1));
   box-shadow: none;
 }
 

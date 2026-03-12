@@ -1,7 +1,6 @@
 import { BookStage } from "./book-stage.js";
 import { renderShelfButtons, collectTemplates, populateBookView, syncTriggerState, trapFocus } from "./content.js";
 import { sectionMap, sections } from "./sections.js";
-import { ShelfStage } from "./shelf-stage.js";
 import { easeDock, easeStandard } from "./utils.js";
 
 let THREE = null;
@@ -20,8 +19,7 @@ if (!siteShell || !bookView || !bookshelf) {
   console.warn("Required site elements are missing. Interactive bookshelf setup was skipped.");
 } else {
   const closeButton = bookView.querySelector(".book-view__close");
-  const shelfStageHost = document.getElementById("shelf-stage");
-  const stageHost = document.getElementById("book-stage");
+  const stageHost = document.getElementById("site-stage");
   const contentPanel = document.getElementById("book-content");
   const viewIndex = document.getElementById("book-view-index");
   const viewKicker = document.getElementById("book-view-kicker");
@@ -43,36 +41,58 @@ if (!siteShell || !bookView || !bookshelf) {
   let isClosing = false;
   let motionToken = 0;
   let bookStage = null;
-  let shelfStage = null;
+  let stageSyncFrame = 0;
 
-  const OPEN_FLOAT_DURATION = 690;
-  const OPEN_TURN_DURATION = 660;
+  const OPEN_EXTRACT_DURATION = 340;
+  const OPEN_CARRY_DURATION = 300;
+  const OPEN_FLOAT_DURATION = 560;
+  const OPEN_TURN_DURATION = 520;
   const OPEN_FRONT_HOLD_DURATION = 150;
   const OPEN_COVER_DURATION = 860;
   const OPEN_READING_DURATION = 250;
-  const CLOSE_COVER_DURATION = 620;
-  const CLOSE_RETURN_DURATION = 760;
+  const CLOSE_EXTRACT_DURATION = 340;
+  const CLOSE_CARRY_DURATION = 300;
+  const CLOSE_COVER_DURATION = 560;
+  const CLOSE_RETURN_DURATION = 720;
   const CLOSE_RESET_DURATION = 240;
 
   if (THREE && stageHost) {
-    bookStage = new BookStage(stageHost, THREE);
-  }
-
-  if (THREE && shelfStageHost) {
-    shelfStage = new ShelfStage(shelfStageHost, THREE, bookButtons, sectionMap, siteTitle);
+    bookStage = new BookStage(stageHost, THREE, bookButtons, sectionMap, siteTitle);
     document.body.classList.add("has-shelf-stage");
   }
 
-  window.addEventListener("resize", () => {
-    shelfStage?.resize();
+  syncStageClip();
 
-    if (bookStage && !bookView.hidden) {
-      bookStage.resize();
-    }
+  window.addEventListener("resize", () => {
+    syncStage();
   });
+
+  window.addEventListener("scroll", scheduleStageSync, { passive: true });
 
   bookButtons.forEach((button) => {
     button.addEventListener("click", () => openSection(button.dataset.section, button));
+  });
+
+  bookshelf.addEventListener("click", (event) => {
+    if (!shouldUse3D() || activeSection || isClosing) {
+      return;
+    }
+
+    const sectionId = bookStage?.pickSectionAt(event.clientX, event.clientY);
+
+    if (!sectionId) {
+      return;
+    }
+
+    const trigger = bookButtons.find((button) => button.dataset.section === sectionId);
+
+    if (!trigger) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    openSection(sectionId, trigger);
   });
 
   bookView.querySelectorAll("[data-close]").forEach((element) => {
@@ -125,12 +145,14 @@ if (!siteShell || !bookView || !bookshelf) {
       siteTitle,
       bookStage,
     });
+    bookStage?.setActiveSection(sectionId);
     syncTriggerState(bookButtons, trigger);
 
     if ("inert" in siteShell) {
       siteShell.inert = true;
     }
 
+    syncStageClip();
     siteShell.setAttribute("aria-hidden", "true");
     document.body.classList.add("view-open");
     bookView.hidden = false;
@@ -169,11 +191,12 @@ if (!siteShell || !bookView || !bookshelf) {
     });
 
     if (use3d && trigger && bookStage) {
-      const shelfTarget = getShelfDockTarget(sectionId, trigger.getBoundingClientRect());
-      const shelfPose = bookStage.createShelfPose(shelfTarget);
-      const spinePose = bookStage.createSpinePose(shelfPose);
-      const frontPose = bookStage.createFrontPose();
-      const openPose = bookStage.createOpenPose();
+      const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose(trigger.getBoundingClientRect());
+      const extractPose = bookStage.createExtractPose(shelfPose);
+      const carryPose = bookStage.createCarryPose(shelfPose);
+      const turnPose = bookStage.createTurnPose(shelfPose);
+      const frontPose = bookStage.createFrontPose(shelfPose);
+      const openPose = bookStage.createOpenPose(shelfPose);
 
       if (!isCloseTokenCurrent(token)) {
         return;
@@ -184,7 +207,9 @@ if (!siteShell || !bookView || !bookshelf) {
         [
           { pose: openPose, duration: CLOSE_RESET_DURATION, easing: easeStandard },
           { pose: frontPose, duration: CLOSE_COVER_DURATION, easing: easeStandard },
-          { pose: spinePose, duration: CLOSE_COVER_DURATION * 0.9, easing: easeStandard },
+          { pose: turnPose, duration: CLOSE_COVER_DURATION * 0.95, easing: easeStandard },
+          { pose: carryPose, duration: CLOSE_CARRY_DURATION, easing: easeStandard },
+          { pose: extractPose, duration: CLOSE_EXTRACT_DURATION, easing: easeStandard },
           { pose: shelfPose, duration: CLOSE_RETURN_DURATION, easing: easeDock },
         ],
         token,
@@ -222,12 +247,14 @@ if (!siteShell || !bookView || !bookshelf) {
     await (document.fonts?.ready ?? Promise.resolve()).catch(() => undefined);
     bookStage.resize();
     bookStage.setReadingMode(false);
-    const shelfTarget = getShelfDockTarget(sectionId, triggerRect);
-    const shelfPose = bookStage.createShelfPose(shelfTarget);
-    const floatPose = bookStage.createFloatPose(shelfPose);
-    const frontPose = bookStage.createFrontPose();
-    const openPose = bookStage.createOpenPose();
-    const readingPose = bookStage.createReadingPose();
+    bookStage.setActiveSection(sectionId);
+    const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose(triggerRect);
+    const extractPose = bookStage.createExtractPose(shelfPose);
+    const carryPose = bookStage.createCarryPose(shelfPose);
+    const turnPose = bookStage.createTurnPose(shelfPose);
+    const frontPose = bookStage.createFrontPose(shelfPose);
+    const openPose = bookStage.createOpenPose(shelfPose);
+    const readingPose = bookStage.createReadingPose(shelfPose);
 
     bookStage.setPose(shelfPose);
     setShelfVacancy(sectionId);
@@ -240,8 +267,10 @@ if (!siteShell || !bookView || !bookshelf) {
 
     await bookStage.animateTimeline(
       [
-        { pose: floatPose, duration: OPEN_FLOAT_DURATION, easing: easeStandard },
-        { pose: frontPose, duration: OPEN_TURN_DURATION, easing: easeStandard },
+        { pose: extractPose, duration: OPEN_EXTRACT_DURATION, easing: easeStandard },
+        { pose: carryPose, duration: OPEN_CARRY_DURATION, easing: easeStandard },
+        { pose: turnPose, duration: OPEN_TURN_DURATION, easing: easeStandard },
+        { pose: frontPose, duration: OPEN_FLOAT_DURATION, easing: easeStandard },
         { pose: frontPose, duration: OPEN_FRONT_HOLD_DURATION, easing: easeStandard },
         { pose: openPose, duration: OPEN_COVER_DURATION, easing: easeStandard },
         { pose: readingPose, duration: OPEN_READING_DURATION, easing: easeStandard },
@@ -274,10 +303,12 @@ if (!siteShell || !bookView || !bookshelf) {
 
     document.body.classList.remove("view-open");
     siteShell.removeAttribute("aria-hidden");
+    syncStageClip();
     bookView.hidden = true;
     setContentProgress(0);
     leftSlot.replaceChildren();
     rightSlot.replaceChildren();
+    bookStage?.clearActiveSection();
     isClosing = false;
     setShelfVacancy(null);
 
@@ -290,8 +321,6 @@ if (!siteShell || !bookView || !bookshelf) {
     bookButtons.forEach((button) => {
       button.classList.toggle("book--vacant", button.dataset.section === sectionId);
     });
-
-    shelfStage?.setVacant(sectionId);
   }
 
   function shouldSimplifyMotion() {
@@ -302,14 +331,44 @@ if (!siteShell || !bookView || !bookshelf) {
     return Boolean(bookStage && bookStage.isReady);
   }
 
-  function getShelfDockTarget(sectionId, fallbackRect) {
-    return shelfStage?.getEntryProjection(sectionId) || fallbackRect;
-  }
-
   function setContentProgress(progress) {
     const clamped = Math.max(0, Math.min(progress, 1));
     bookView.style.setProperty("--content-progress", clamped.toFixed(4));
     bookView.style.setProperty("--topline-progress", Math.min(clamped * 1.08, 1).toFixed(4));
+  }
+
+  function syncStageClip() {
+    if (!stageHost || document.body.classList.contains("view-open")) {
+      return;
+    }
+
+    const rect = bookshelf.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const borderRadius = window.getComputedStyle(bookshelf).borderTopLeftRadius || "18px";
+
+    stageHost.style.setProperty("--shelf-clip-top", `${Math.max(0, rect.top)}px`);
+    stageHost.style.setProperty("--shelf-clip-right", `${Math.max(0, viewportWidth - rect.right)}px`);
+    stageHost.style.setProperty("--shelf-clip-bottom", `${Math.max(0, viewportHeight - rect.bottom)}px`);
+    stageHost.style.setProperty("--shelf-clip-left", `${Math.max(0, rect.left)}px`);
+    stageHost.style.setProperty("--shelf-clip-radius", borderRadius);
+  }
+
+  function syncStage() {
+    bookStage?.syncLayout();
+    bookStage?.render();
+    syncStageClip();
+  }
+
+  function scheduleStageSync() {
+    if (stageSyncFrame) {
+      return;
+    }
+
+    stageSyncFrame = window.requestAnimationFrame(() => {
+      stageSyncFrame = 0;
+      syncStage();
+    });
   }
 
   function mapRange(value, start, end) {
