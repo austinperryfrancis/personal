@@ -18,12 +18,13 @@ const DEFAULT_POSE = {
 };
 
 export class BookStage {
-  constructor(host, three, buttons = [], sectionMap = new Map(), siteTitle = "Austin Francis") {
+  constructor(host, three, buttons = [], sectionMap = new Map(), siteTitle = "Austin Francis", options = {}) {
     this.host = host;
     this.THREE = three;
     this.buttons = buttons;
     this.sectionMap = sectionMap;
     this.siteTitle = siteTitle;
+    this.mode = options.mode || "shelf";
     this.dimensions = { ...BOOK_DIMENSIONS };
     this.entries = new Map();
     this.shelfOrder = [];
@@ -76,6 +77,12 @@ export class BookStage {
       this.root.add(entry.root);
     });
 
+    if (this.mode === "overlay") {
+      this.entries.forEach((entry) => {
+        entry.root.visible = false;
+      });
+    }
+
     this.resize();
     this.render();
     this.isReady = true;
@@ -96,6 +103,7 @@ export class BookStage {
       id: section?.id || button.dataset.section,
       button,
       section,
+      isVacant: false,
       metadata: { ...metadata },
       shelfMetadata: { ...metadata },
       shelfPose: {
@@ -354,6 +362,20 @@ export class BookStage {
       return;
     }
 
+    if (this.mode === "overlay") {
+      if (this.activeEntry && this.activeEntry !== entry) {
+        this.activeEntry.root.visible = false;
+        this.activeEntry.root.renderOrder = 0;
+      }
+
+      this.entries.forEach((candidate) => {
+        if (candidate !== entry) {
+          candidate.root.visible = false;
+          candidate.root.renderOrder = 0;
+        }
+      });
+    }
+
     this.activeEntry = entry;
     this.activeEntry.root.visible = true;
     this.activeEntry.root.renderOrder = 24;
@@ -381,7 +403,7 @@ export class BookStage {
     this.activeEntry = null;
     this.pose = { ...DEFAULT_POSE };
     this.pendingMetadata = null;
-    resolvedEntry.root.visible = true;
+    resolvedEntry.root.visible = this.mode !== "overlay";
     this.render();
   }
 
@@ -407,11 +429,19 @@ export class BookStage {
     this.camera.aspect = rect.width / rect.height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(rect.width, rect.height, false);
-    this.syncLayout();
+
+    if (this.mode !== "overlay") {
+      this.syncLayout();
+    }
+
     this.render();
   }
 
   syncLayout() {
+    if (this.mode === "overlay") {
+      return;
+    }
+
     const rect = this.host.getBoundingClientRect();
 
     if (!rect.width || !rect.height) {
@@ -433,7 +463,7 @@ export class BookStage {
     const unitsPerPixel = viewHeight / rect.height;
     const packedEntries = Array.from(this.entries.values())
       .map((entry) => {
-        const buttonRect = entry.button.getBoundingClientRect();
+        const buttonRect = this.getButtonLayoutRect(entry.button);
         const centerY = buttonRect.top + buttonRect.height / 2 - rect.top;
         const y = (0.5 - centerY / rect.height) * viewHeight;
         const scale = Math.max(
@@ -507,16 +537,74 @@ export class BookStage {
     this.shelfOrder = packedEntries.map((item) => item.entry.id);
 
     this.entries.forEach((entry) => {
-      const buttonRect = entry.button.getBoundingClientRect();
+      const buttonRect = this.getButtonLayoutRect(entry.button);
       const isVisible = !(buttonRect.left + buttonRect.width < rect.left || buttonRect.left > rect.right);
       entry.isInViewport = isVisible;
-      entry.root.visible = isVisible;
+      entry.root.visible = isVisible && !entry.isVacant;
     });
+  }
+
+  getButtonLayoutRect(button) {
+    const shelfRect = button.parentElement?.getBoundingClientRect();
+
+    if (!shelfRect) {
+      return button.getBoundingClientRect();
+    }
+
+    const left = shelfRect.left + button.offsetLeft;
+    const top = shelfRect.top + button.offsetTop;
+    const width = button.offsetWidth;
+    const height = button.offsetHeight;
+
+    return {
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+    };
   }
 
   getShelfPose(sectionId) {
     const entry = this.entries.get(sectionId);
     return entry?.shelfPose ? { ...entry.shelfPose } : null;
+  }
+
+  setShelfPose(sectionId, pose) {
+    const entry = this.entries.get(sectionId);
+
+    if (!entry || !pose) {
+      return;
+    }
+
+    entry.shelfPose = {
+      ...DEFAULT_POSE,
+      ...entry.shelfPose,
+      ...pose,
+    };
+    this.updateActorCollisionBox(entry, entry.shelfPose);
+  }
+
+  setShelfOrder(order) {
+    if (!Array.isArray(order)) {
+      return;
+    }
+
+    this.shelfOrder = [...order];
+  }
+
+  getShelfOrder() {
+    return [...this.shelfOrder];
+  }
+
+  setVacant(sectionId) {
+    this.entries.forEach((entry, key) => {
+      entry.isVacant = Boolean(sectionId && key === sectionId);
+      entry.root.visible = entry.isInViewport && !entry.isVacant;
+    });
+
+    this.render();
   }
 
   createShelfPose(fallbackRect) {
@@ -952,8 +1040,10 @@ export class BookStage {
     const scale = Math.max(0.13, (viewportRect.height * unitsPerPixel) / this.dimensions.height);
 
     return {
+      ...DEFAULT_POSE,
       x,
       y,
+      z: 0,
       scale: scale * SHELF_SCALE_FACTOR,
       rx: SHELF_ROTATION.rx,
       ry: SHELF_ROTATION.ry,

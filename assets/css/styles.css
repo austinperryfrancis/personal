@@ -47,10 +47,6 @@
   opacity: 1;
 }
 
-body.view-open .site-stage {
-  clip-path: none;
-}
-
 .book-view[hidden] {
   display: none;
 }

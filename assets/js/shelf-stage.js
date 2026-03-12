@@ -11,6 +11,7 @@ export class ShelfStage {
     this.siteTitle = siteTitle;
     this.entries = new Map();
     this.dimensions = { ...BOOK_DIMENSIONS };
+    this.isReady = false;
 
     this.setup();
   }
@@ -52,6 +53,7 @@ export class ShelfStage {
 
     this.resize();
     this.render();
+    this.isReady = true;
   }
 
   createEntry(button) {
@@ -194,6 +196,16 @@ export class ShelfStage {
     this.camera.aspect = rect.width / rect.height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(rect.width, rect.height, false);
+    this.syncLayout();
+  }
+
+  syncLayout() {
+    const rect = this.host.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      return;
+    }
+
     this.layoutBooks();
     this.render();
   }

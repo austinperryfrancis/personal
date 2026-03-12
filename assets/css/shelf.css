@@ -184,7 +184,7 @@ body.has-shelf-stage .bookshelf .book--hit {
   background: transparent;
   box-shadow: none;
   color: transparent;
-  pointer-events: none;
+  pointer-events: auto;
   transform:
     translate(var(--hit-x, 0px), var(--hit-y, 0px))
     scale(var(--hit-scale-x, 1), var(--hit-scale-y, 1));

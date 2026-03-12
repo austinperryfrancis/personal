@@ -19,7 +19,8 @@ if (!siteShell || !bookView || !bookshelf) {
   console.warn("Required site elements are missing. Interactive bookshelf setup was skipped.");
 } else {
   const closeButton = bookView.querySelector(".book-view__close");
-  const stageHost = document.getElementById("site-stage");
+  const shelfStageHost = document.getElementById("site-stage");
+  const bookStageFrame = bookView.querySelector(".book-stage");
   const contentPanel = document.getElementById("book-content");
   const viewIndex = document.getElementById("book-view-index");
   const viewKicker = document.getElementById("book-view-kicker");
@@ -29,6 +30,7 @@ if (!siteShell || !bookView || !bookshelf) {
   const leftSlot = bookView.querySelector('[data-slot="left"]');
   const rightSlot = bookView.querySelector('[data-slot="right"]');
   const siteTitle = document.getElementById("site-title")?.textContent?.trim() || "Austin Francis";
+  const overlayStageHost = bookStageFrame ? document.createElement("div") : null;
 
   const bookButtons = renderShelfButtons(bookshelf, sections);
   const templates = collectTemplates(document);
@@ -40,6 +42,7 @@ if (!siteShell || !bookView || !bookshelf) {
   let hideTimer = 0;
   let isClosing = false;
   let motionToken = 0;
+  let shelfStage = null;
   let bookStage = null;
   let stageSyncFrame = 0;
 
@@ -56,8 +59,21 @@ if (!siteShell || !bookView || !bookshelf) {
   const CLOSE_RETURN_DURATION = 720;
   const CLOSE_RESET_DURATION = 240;
 
-  if (THREE && stageHost) {
-    bookStage = new BookStage(stageHost, THREE, bookButtons, sectionMap, siteTitle);
+  if (overlayStageHost) {
+    overlayStageHost.className = "book-stage__viewport";
+    bookStageFrame.replaceChildren(overlayStageHost);
+  }
+
+  if (THREE && shelfStageHost && overlayStageHost) {
+    shelfStage = new BookStage(shelfStageHost, THREE, bookButtons, sectionMap, siteTitle);
+    bookStage = new BookStage(
+      overlayStageHost,
+      THREE,
+      bookButtons,
+      sectionMap,
+      siteTitle,
+      { mode: "overlay" },
+    );
     document.body.classList.add("has-shelf-stage");
   }
 
@@ -71,28 +87,6 @@ if (!siteShell || !bookView || !bookshelf) {
 
   bookButtons.forEach((button) => {
     button.addEventListener("click", () => openSection(button.dataset.section, button));
-  });
-
-  bookshelf.addEventListener("click", (event) => {
-    if (!shouldUse3D() || activeSection || isClosing) {
-      return;
-    }
-
-    const sectionId = bookStage?.pickSectionAt(event.clientX, event.clientY);
-
-    if (!sectionId) {
-      return;
-    }
-
-    const trigger = bookButtons.find((button) => button.dataset.section === sectionId);
-
-    if (!trigger) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    openSection(sectionId, trigger);
   });
 
   bookView.querySelectorAll("[data-close]").forEach((element) => {
@@ -145,7 +139,6 @@ if (!siteShell || !bookView || !bookshelf) {
       siteTitle,
       bookStage,
     });
-    bookStage?.setActiveSection(sectionId);
     syncTriggerState(bookButtons, trigger);
 
     if ("inert" in siteShell) {
@@ -157,13 +150,13 @@ if (!siteShell || !bookView || !bookshelf) {
     document.body.classList.add("view-open");
     bookView.hidden = false;
     bookView.setAttribute("aria-hidden", "false");
-    bookView.classList.remove("is-content-visible", "is-simple");
+    bookView.classList.remove("is-content-visible", "is-open", "is-simple");
     bookView.classList.add("is-visible");
     setContentProgress(0);
 
     if (shouldSimplifyMotion()) {
       setShelfVacancy(sectionId);
-      bookView.classList.add("is-simple", "is-content-visible");
+      bookView.classList.add("is-simple", "is-content-visible", "is-open");
       setContentProgress(1);
       closeButton?.focus();
       return;
@@ -190,7 +183,10 @@ if (!siteShell || !bookView || !bookshelf) {
       button.setAttribute("aria-expanded", "false");
     });
 
-    if (use3d && trigger && bookStage) {
+    if (use3d && trigger && shelfStage && bookStage) {
+      shelfStage.syncLayout();
+      bookStage.resize();
+      syncOverlayShelfPoses();
       const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose(trigger.getBoundingClientRect());
       const extractPose = bookStage.createExtractPose(shelfPose);
       const carryPose = bookStage.createCarryPose(shelfPose);
@@ -202,7 +198,7 @@ if (!siteShell || !bookView || !bookshelf) {
         return;
       }
 
-      bookView.classList.remove("is-content-visible");
+      bookView.classList.remove("is-content-visible", "is-open");
       await bookStage.animateTimeline(
         [
           { pose: openPose, duration: CLOSE_RESET_DURATION, easing: easeStandard },
@@ -229,7 +225,7 @@ if (!siteShell || !bookView || !bookshelf) {
         return;
       }
     } else {
-      bookView.classList.remove("is-content-visible", "is-simple");
+      bookView.classList.remove("is-content-visible", "is-open", "is-simple");
       setContentProgress(0);
     }
 
@@ -237,17 +233,19 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   async function runOpenSequence(sectionId, triggerRect, token) {
-    if (!bookStage) {
-      bookView.classList.add("is-simple", "is-content-visible");
+    if (!shelfStage || !bookStage) {
+      bookView.classList.add("is-simple", "is-content-visible", "is-open");
       setContentProgress(1);
       closeButton?.focus();
       return;
     }
 
     await (document.fonts?.ready ?? Promise.resolve()).catch(() => undefined);
+    shelfStage.syncLayout();
     bookStage.resize();
-    bookStage.setReadingMode(false);
+    syncOverlayShelfPoses();
     bookStage.setActiveSection(sectionId);
+    bookStage.setReadingMode(false);
     const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose(triggerRect);
     const extractPose = bookStage.createExtractPose(shelfPose);
     const carryPose = bookStage.createCarryPose(shelfPose);
@@ -284,7 +282,7 @@ if (!siteShell || !bookView || !bookshelf) {
 
     if (isMotionCurrent(token, sectionId)) {
       setContentProgress(1);
-      bookView.classList.add("is-content-visible");
+      bookView.classList.add("is-content-visible", "is-open");
       closeButton?.focus();
     }
   }
@@ -294,7 +292,8 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   function teardownOverlay(trigger) {
-    bookView.classList.remove("is-content-visible", "is-simple", "is-visible");
+    bookStage?.clearActiveSection();
+    bookView.classList.remove("is-content-visible", "is-open", "is-simple", "is-visible");
     bookView.setAttribute("aria-hidden", "true");
 
     if ("inert" in siteShell) {
@@ -308,7 +307,6 @@ if (!siteShell || !bookView || !bookshelf) {
     setContentProgress(0);
     leftSlot.replaceChildren();
     rightSlot.replaceChildren();
-    bookStage?.clearActiveSection();
     isClosing = false;
     setShelfVacancy(null);
 
@@ -318,6 +316,7 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   function setShelfVacancy(sectionId) {
+    shelfStage?.setVacant(sectionId);
     bookButtons.forEach((button) => {
       button.classList.toggle("book--vacant", button.dataset.section === sectionId);
     });
@@ -328,7 +327,7 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   function shouldUse3D() {
-    return Boolean(bookStage && bookStage.isReady);
+    return Boolean(shelfStage?.isReady && bookStage?.isReady);
   }
 
   function setContentProgress(progress) {
@@ -337,8 +336,24 @@ if (!siteShell || !bookView || !bookshelf) {
     bookView.style.setProperty("--topline-progress", Math.min(clamped * 1.08, 1).toFixed(4));
   }
 
+  function syncOverlayShelfPoses() {
+    if (!shelfStage || !bookStage || bookView.hidden) {
+      return;
+    }
+
+    sections.forEach((section) => {
+      const pose = shelfStage.getShelfPose(section.id);
+
+      if (pose) {
+        bookStage.setShelfPose(section.id, pose);
+      }
+    });
+
+    bookStage.setShelfOrder(shelfStage.getShelfOrder());
+  }
+
   function syncStageClip() {
-    if (!stageHost || document.body.classList.contains("view-open")) {
+    if (!shelfStageHost) {
       return;
     }
 
@@ -347,16 +362,21 @@ if (!siteShell || !bookView || !bookshelf) {
     const viewportHeight = window.innerHeight;
     const borderRadius = window.getComputedStyle(bookshelf).borderTopLeftRadius || "18px";
 
-    stageHost.style.setProperty("--shelf-clip-top", `${Math.max(0, rect.top)}px`);
-    stageHost.style.setProperty("--shelf-clip-right", `${Math.max(0, viewportWidth - rect.right)}px`);
-    stageHost.style.setProperty("--shelf-clip-bottom", `${Math.max(0, viewportHeight - rect.bottom)}px`);
-    stageHost.style.setProperty("--shelf-clip-left", `${Math.max(0, rect.left)}px`);
-    stageHost.style.setProperty("--shelf-clip-radius", borderRadius);
+    shelfStageHost.style.setProperty("--shelf-clip-top", `${Math.max(0, rect.top)}px`);
+    shelfStageHost.style.setProperty("--shelf-clip-right", `${Math.max(0, viewportWidth - rect.right)}px`);
+    shelfStageHost.style.setProperty("--shelf-clip-bottom", `${Math.max(0, viewportHeight - rect.bottom)}px`);
+    shelfStageHost.style.setProperty("--shelf-clip-left", `${Math.max(0, rect.left)}px`);
+    shelfStageHost.style.setProperty("--shelf-clip-radius", borderRadius);
   }
 
   function syncStage() {
-    bookStage?.syncLayout();
-    bookStage?.render();
+    shelfStage?.syncLayout();
+
+    if (!bookView.hidden) {
+      bookStage?.resize();
+      syncOverlayShelfPoses();
+    }
+
     syncStageClip();
   }
 
