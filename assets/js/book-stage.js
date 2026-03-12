@@ -1240,12 +1240,14 @@ export class BookStage {
     const readingRatio = Math.min(Math.max(reading, 0), 1);
     const modelFade = 1 - readingRatio;
     const pageBlend = Math.min(openRatio * 0.88 + readingRatio, 1);
+    const shadowOpacity = this.getShadowOpacity(actor, pose, shadow, readingRatio);
 
     actor.root.position.set(x, y, z);
     actor.bookPivot.rotation.set(rx, ry, rz);
     actor.bookPivot.scale.setScalar(scale);
     actor.model.coverPivot.rotation.y = cover;
-    actor.shadow.material.opacity = 0.22 * shadow * (1 - readingRatio);
+    actor.shadow.material.opacity = shadowOpacity;
+    actor.shadow.visible = shadowOpacity > 0.001;
     actor.shadow.scale.set(1.1 * shadow, 0.92 * shadow, 1);
 
     if (actor.coverBaseColor && actor.pageColor && actor.innerCoverColor) {
@@ -1304,6 +1306,28 @@ export class BookStage {
     if (shouldRender) {
       this.render();
     }
+  }
+
+  getShadowOpacity(actor, pose, shadow, readingRatio) {
+    const baseOpacity = 0.22 * shadow * (1 - readingRatio);
+
+    if (this.mode !== "overlay") {
+      return baseOpacity;
+    }
+
+    if (actor !== this.activeEntry || !actor.shelfPose) {
+      return 0;
+    }
+
+    const fadeStart = this.createTurnPose(actor.shelfPose).z;
+    const fadeEnd = this.createFrontPose(actor.shelfPose).z;
+
+    if (fadeEnd <= fadeStart) {
+      return baseOpacity;
+    }
+
+    const progress = Math.max(0, Math.min((pose.z - fadeStart) / (fadeEnd - fadeStart), 1));
+    return baseOpacity * progress;
   }
 
   render() {
