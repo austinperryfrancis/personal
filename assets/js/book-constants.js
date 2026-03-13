@@ -9,9 +9,15 @@ export const BOOK_DIMENSIONS = {
 export const COVER_OPEN_ANGLE = -3.11;
 
 export const SHELF_ROTATION = {
-  rx: 0.012,
-  ry: 1.556,
+  rx: 0,
+  ry: Math.PI / 2,
   rz: 0,
 };
+
+export const SHELF_DEPTH = -0.08;
+
+export const SHELF_IDLE_SHADOW = 0.58;
+
+export const SHELF_VERTICAL_LIFT_PX = 10;
 
 export const SHELF_SCALE_FACTOR = 0.96;

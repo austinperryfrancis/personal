@@ -30,8 +30,7 @@
 }
 
 .shelf-frame::after {
-  bottom: 0.8rem;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  content: none;
 }
 
 .bookshelf {
@@ -56,14 +55,7 @@
 }
 
 .bookshelf::after {
-  content: "";
-  position: absolute;
-  left: 0.7rem;
-  right: 0.7rem;
-  bottom: 1rem;
-  height: 0.9rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.05));
+  content: none;
 }
 
 .bookshelf__stage {

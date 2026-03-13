@@ -1,4 +1,12 @@
-import { BOOK_DIMENSIONS, COVER_OPEN_ANGLE, SHELF_ROTATION, SHELF_SCALE_FACTOR } from "./book-constants.js";
+import {
+  BOOK_DIMENSIONS,
+  COVER_OPEN_ANGLE,
+  SHELF_DEPTH,
+  SHELF_IDLE_SHADOW,
+  SHELF_ROTATION,
+  SHELF_SCALE_FACTOR,
+  SHELF_VERTICAL_LIFT_PX,
+} from "./book-constants.js";
 import { tonePalettes } from "./tone-palettes.js";
 import { createCoverTexture, createSpineTexture } from "./textures.js";
 import { lerp } from "./utils.js";
@@ -111,7 +119,8 @@ export class BookStage {
         rx: SHELF_ROTATION.rx,
         ry: SHELF_ROTATION.ry,
         rz: SHELF_ROTATION.rz,
-        shadow: 0.72,
+        z: SHELF_DEPTH,
+        shadow: SHELF_IDLE_SHADOW,
       },
     };
   }
@@ -449,11 +458,12 @@ export class BookStage {
 
     const viewHeight = 2 * Math.tan(this.THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.position.z;
     const unitsPerPixel = viewHeight / rect.height;
+    const shelfLift = unitsPerPixel * SHELF_VERTICAL_LIFT_PX;
     const packedEntries = Array.from(this.entries.values())
       .map((entry) => {
         const buttonRect = this.getButtonLayoutRect(entry.button);
         const centerY = buttonRect.top + buttonRect.height / 2 - rect.top;
-        const y = (0.5 - centerY / rect.height) * viewHeight;
+        const y = ((0.5 - centerY / rect.height) * viewHeight) + shelfLift;
         const scale = Math.max(
           0.13,
           ((buttonRect.height * unitsPerPixel) / this.dimensions.height) * SHELF_SCALE_FACTOR,
@@ -462,12 +472,12 @@ export class BookStage {
           ...DEFAULT_POSE,
           x: 0,
           y,
-          z: -0.2,
+          z: SHELF_DEPTH,
           scale,
           rx: SHELF_ROTATION.rx,
           ry: SHELF_ROTATION.ry,
           rz: SHELF_ROTATION.rz,
-          shadow: 0.72,
+          shadow: SHELF_IDLE_SHADOW,
         };
         const packedWidth = (this.getPoseExtentAlongAxis(shelfPose, "x") * 2) + (unitsPerPixel * 0.28);
 
@@ -482,8 +492,6 @@ export class BookStage {
       .sort((left, right) => left.buttonRect.left - right.buttonRect.left);
 
     const shelfGap = 0;
-    const shelfDepth = -0.2;
-
     let totalWidth = 0;
     packedEntries.forEach((item, index) => {
       totalWidth += item.packedWidth;
@@ -499,13 +507,13 @@ export class BookStage {
       item.entry.shelfPose = {
         x,
         y: item.y,
-        z: shelfDepth,
+        z: SHELF_DEPTH,
         scale: item.scale,
         rx: SHELF_ROTATION.rx,
         ry: SHELF_ROTATION.ry,
         rz: SHELF_ROTATION.rz,
         cover: 0,
-        shadow: 0.72,
+        shadow: SHELF_IDLE_SHADOW,
         reading: 0,
       };
 
@@ -557,6 +565,32 @@ export class BookStage {
   getShelfPose(sectionId) {
     const entry = this.entries.get(sectionId);
     return entry?.shelfPose ? { ...entry.shelfPose } : null;
+  }
+
+  getProjectedBoundsForSection(sectionId, pose = null) {
+    const entry = this.entries.get(sectionId);
+    const hostRect = this.host.getBoundingClientRect();
+
+    if (!entry || !hostRect.width || !hostRect.height) {
+      return null;
+    }
+
+    const resolvedPose = pose ? { ...entry.shelfPose, ...pose } : entry.shelfPose;
+    const bounds = this.measureProjectedBounds(entry, resolvedPose);
+
+    if (!bounds) {
+      return null;
+    }
+
+    return {
+      left: hostRect.left + bounds.left,
+      top: hostRect.top + bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+      right: hostRect.left + bounds.left + bounds.width,
+      bottom: hostRect.top + bounds.top + bounds.height,
+      pose: { ...resolvedPose },
+    };
   }
 
   setShelfPose(sectionId, pose) {
@@ -630,7 +664,8 @@ export class BookStage {
       rx: SHELF_ROTATION.rx,
       ry: SHELF_ROTATION.ry,
       rz: SHELF_ROTATION.rz,
-      shadow: 0.72,
+      z: SHELF_DEPTH,
+      shadow: SHELF_IDLE_SHADOW,
     };
   }
 
@@ -1037,12 +1072,71 @@ export class BookStage {
     };
   }
 
+  createPoseFromViewportBounds(sectionId, viewportBounds, basePose = null) {
+    const entry = this.entries.get(sectionId);
+    const hostRect = this.host.getBoundingClientRect();
+
+    if (!entry || !viewportBounds || !hostRect.width || !hostRect.height) {
+      return basePose ? { ...basePose } : null;
+    }
+
+    const pose = {
+      ...DEFAULT_POSE,
+      ...entry.shelfPose,
+      ...basePose,
+    };
+    const desiredCenterX = viewportBounds.left + (viewportBounds.width / 2);
+    const desiredCenterY = viewportBounds.top + (viewportBounds.height / 2);
+
+    for (let iteration = 0; iteration < 3; iteration += 1) {
+      const desiredCenter = this.projectViewportPointToPlane(desiredCenterX, desiredCenterY, pose.z);
+
+      if (!desiredCenter) {
+        break;
+      }
+
+      pose.x = desiredCenter.x;
+      pose.y = desiredCenter.y;
+
+      const measured = this.measureProjectedBounds(entry, pose);
+
+      if (!measured?.width || !measured?.height) {
+        break;
+      }
+
+      const measuredViewport = {
+        left: hostRect.left + measured.left,
+        top: hostRect.top + measured.top,
+        width: measured.width,
+        height: measured.height,
+      };
+      const measuredCenterX = measuredViewport.left + (measuredViewport.width / 2);
+      const measuredCenterY = measuredViewport.top + (measuredViewport.height / 2);
+      const measuredCenter = this.projectViewportPointToPlane(measuredCenterX, measuredCenterY, pose.z);
+
+      if (measuredCenter) {
+        pose.x += desiredCenter.x - measuredCenter.x;
+        pose.y += desiredCenter.y - measuredCenter.y;
+      }
+
+      const heightRatio = viewportBounds.height / measuredViewport.height;
+      const widthRatio = viewportBounds.width && measuredViewport.width
+        ? viewportBounds.width / measuredViewport.width
+        : heightRatio;
+      const scaleRatio = (heightRatio + widthRatio) / 2;
+
+      pose.scale *= scaleRatio;
+    }
+
+    return pose;
+  }
+
   projectTriggerRect(viewportRect) {
     const rect = this.host.getBoundingClientRect();
     const viewHeight = 2 * Math.tan(this.THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.position.z;
     const viewWidth = viewHeight * this.camera.aspect;
     const centerX = viewportRect.left + viewportRect.width / 2 - rect.left;
-    const centerY = viewportRect.top + viewportRect.height / 2 - rect.top;
+    const centerY = viewportRect.top + viewportRect.height / 2 - rect.top - SHELF_VERTICAL_LIFT_PX;
     const x = (centerX / rect.width - 0.5) * viewWidth;
     const y = (0.5 - centerY / rect.height) * viewHeight;
     const unitsPerPixel = viewHeight / rect.height;
@@ -1052,14 +1146,40 @@ export class BookStage {
       ...DEFAULT_POSE,
       x,
       y,
-      z: 0,
+      z: SHELF_DEPTH,
       scale: scale * SHELF_SCALE_FACTOR,
       rx: SHELF_ROTATION.rx,
       ry: SHELF_ROTATION.ry,
       rz: SHELF_ROTATION.rz,
       cover: 0,
-      shadow: 0.72,
+      shadow: SHELF_IDLE_SHADOW,
       reading: 0,
+    };
+  }
+
+  projectViewportPointToPlane(viewportX, viewportY, zPlane) {
+    const rect = this.host.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    const ndcX = ((viewportX - rect.left) / rect.width) * 2 - 1;
+    const ndcY = -(((viewportY - rect.top) / rect.height) * 2 - 1);
+    const plane = new this.THREE.Plane(new this.THREE.Vector3(0, 0, 1), -zPlane);
+    const point = new this.THREE.Vector3();
+
+    this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld();
+    this.raycaster.setFromCamera({ x: ndcX, y: ndcY }, this.camera);
+
+    if (!this.raycaster.ray.intersectPlane(plane, point)) {
+      return null;
+    }
+
+    return {
+      x: point.x,
+      y: point.y,
     };
   }
 

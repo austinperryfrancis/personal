@@ -19,8 +19,8 @@ if (!siteShell || !bookView || !bookshelf) {
   console.warn("Required site elements are missing. Interactive bookshelf setup was skipped.");
 } else {
   const closeButton = bookView.querySelector(".book-view__close");
-  const shelfStageHost = document.getElementById("site-stage");
-  const bookStageFrame = bookView.querySelector(".book-stage");
+  const existingShelfStageHost = document.getElementById("site-stage");
+  const stageHost = existingShelfStageHost || document.createElement("div");
   const contentPanel = document.getElementById("book-content");
   const viewIndex = document.getElementById("book-view-index");
   const viewKicker = document.getElementById("book-view-kicker");
@@ -30,27 +30,37 @@ if (!siteShell || !bookView || !bookshelf) {
   const leftSlot = bookView.querySelector('[data-slot="left"]');
   const rightSlot = bookView.querySelector('[data-slot="right"]');
   const siteTitle = document.getElementById("site-title")?.textContent?.trim() || "Austin Francis";
-  const overlayStageHost = bookStageFrame ? document.createElement("div") : null;
+
+  if (!existingShelfStageHost) {
+    stageHost.id = "site-stage";
+    stageHost.className = "site-stage bookshelf__stage";
+    stageHost.setAttribute("aria-hidden", "true");
+    bookshelf.prepend(stageHost);
+  } else if (stageHost.parentElement !== bookshelf) {
+    bookshelf.prepend(stageHost);
+  }
 
   const bookButtons = renderShelfButtons(bookshelf, sections);
   const templates = collectTemplates(document);
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const desktopMotionQuery = window.matchMedia("(min-width: 861px)");
+  const resizeObserver = typeof ResizeObserver === "function"
+    ? new ResizeObserver(() => {
+      syncStage();
+    })
+    : null;
 
   let activeSection = null;
   let lastTrigger = null;
-  let hideTimer = 0;
   let isClosing = false;
   let motionToken = 0;
-  let shelfStage = null;
   let bookStage = null;
-  let stageSyncFrame = 0;
-  let overlayClipProgress = 0;
+  let stageClipProgress = 0;
   let latestShelfClip = null;
+  let stageSyncFrame = 0;
 
   const OPEN_EXTRACT_DURATION = 340;
   const OPEN_CARRY_DURATION = 300;
-  const OPEN_FLOAT_DURATION = 560;
   const OPEN_TURN_DURATION = 520;
   const OPEN_FRONT_HOLD_DURATION = 150;
   const OPEN_COVER_DURATION = 860;
@@ -61,33 +71,18 @@ if (!siteShell || !bookView || !bookshelf) {
   const CLOSE_RETURN_DURATION = 720;
   const CLOSE_RESET_DURATION = 240;
 
-  if (overlayStageHost) {
-    overlayStageHost.className = "book-stage__viewport";
-    bookStageFrame.replaceChildren(overlayStageHost);
-  }
-
-  if (THREE && shelfStageHost && overlayStageHost) {
-    shelfStage = new BookStage(shelfStageHost, THREE, bookButtons, sectionMap, siteTitle);
-    bookStage = new BookStage(
-      overlayStageHost,
-      THREE,
-      bookButtons,
-      sectionMap,
-      siteTitle,
-      { mode: "overlay" },
-    );
+  if (THREE && stageHost) {
+    bookStage = new BookStage(stageHost, THREE, bookButtons, sectionMap, siteTitle);
     document.body.classList.add("has-shelf-stage");
   }
 
-  setShelfStageVisibility(true);
-  setOverlayStageVisibility(false);
-
-  syncStageClip();
+  syncStage();
+  setStageClipProgress(0);
+  resizeObserver?.observe(bookshelf);
 
   window.addEventListener("resize", () => {
     syncStage();
   });
-
   window.addEventListener("scroll", scheduleStageSync, { passive: true });
 
   bookButtons.forEach((button) => {
@@ -122,8 +117,6 @@ if (!siteShell || !bookView || !bookshelf) {
       return;
     }
 
-    clearTimeout(hideTimer);
-
     const token = ++motionToken;
     activeSection = sectionId;
     lastTrigger = trigger;
@@ -150,9 +143,8 @@ if (!siteShell || !bookView || !bookshelf) {
       siteShell.inert = true;
     }
 
-    syncStageClip();
-    setOverlayClipProgress(1);
-    setOverlayStageVisibility(false);
+    syncStage();
+    setStageClipProgress(0);
     siteShell.setAttribute("aria-hidden", "true");
     document.body.classList.add("view-open");
     bookView.hidden = false;
@@ -163,15 +155,13 @@ if (!siteShell || !bookView || !bookshelf) {
 
     if (shouldSimplifyMotion()) {
       setShelfVacancy(sectionId);
-      setShelfStageVisibility(true);
-      setOverlayStageVisibility(false);
       bookView.classList.add("is-simple", "is-content-visible", "is-open");
       setContentProgress(1);
       closeButton?.focus();
       return;
     }
 
-    runOpenSequence(sectionId, trigger.getBoundingClientRect(), token);
+    runOpenSequence(sectionId, token);
   }
 
   async function closeSection() {
@@ -192,10 +182,8 @@ if (!siteShell || !bookView || !bookshelf) {
       button.setAttribute("aria-expanded", "false");
     });
 
-    if (use3d && trigger && shelfStage && bookStage) {
-      shelfStage.syncLayout();
+    if (use3d && trigger && bookStage) {
       bookStage.resize();
-      syncOverlayShelfPoses();
       const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose(trigger.getBoundingClientRect());
       const extractPose = bookStage.createExtractPose(shelfPose);
       const carryPose = bookStage.createCarryPose(shelfPose);
@@ -204,8 +192,6 @@ if (!siteShell || !bookView || !bookshelf) {
       const openPose = bookStage.createOpenPose(shelfPose);
 
       if (!isCloseTokenCurrent(token)) {
-        setShelfStageVisibility(true);
-        setOverlayStageVisibility(false);
         return;
       }
 
@@ -222,19 +208,14 @@ if (!siteShell || !bookView || !bookshelf) {
         token,
         motionTokenRef,
         ({ progress }) => {
+          setStageClipProgress(1 - easeOutCubic(mapRange(progress, 0.78, 1)));
           setContentProgress(1 - mapRange(progress, 0, 0.2));
         },
       );
 
       if (!isCloseTokenCurrent(token)) {
-        setShelfStageVisibility(true);
-        setOverlayStageVisibility(false);
         return;
       }
-
-      setShelfStageVisibility(true);
-      await waitForPaint();
-      setOverlayStageVisibility(false);
     } else {
       bookView.classList.remove("is-content-visible", "is-open", "is-simple");
       setContentProgress(0);
@@ -243,8 +224,8 @@ if (!siteShell || !bookView || !bookshelf) {
     teardownOverlay(trigger);
   }
 
-  async function runOpenSequence(sectionId, triggerRect, token) {
-    if (!shelfStage || !bookStage) {
+  async function runOpenSequence(sectionId, token) {
+    if (!bookStage) {
       bookView.classList.add("is-simple", "is-content-visible", "is-open");
       setContentProgress(1);
       closeButton?.focus();
@@ -252,12 +233,11 @@ if (!siteShell || !bookView || !bookshelf) {
     }
 
     await (document.fonts?.ready ?? Promise.resolve()).catch(() => undefined);
-    shelfStage.syncLayout();
+    syncStage();
     bookStage.resize();
-    syncOverlayShelfPoses();
     bookStage.setActiveSection(sectionId);
     bookStage.setReadingMode(false);
-    const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose(triggerRect);
+    const shelfPose = bookStage.getShelfPose(sectionId) || bookStage.createShelfPose();
     const extractPose = bookStage.createExtractPose(shelfPose);
     const carryPose = bookStage.createCarryPose(shelfPose);
     const turnPose = bookStage.createTurnPose(shelfPose);
@@ -266,23 +246,10 @@ if (!siteShell || !bookView || !bookshelf) {
     const readingPose = bookStage.createReadingPose(shelfPose);
     bookStage.setPose(shelfPose);
     setContentProgress(0);
-    setOverlayClipProgress(1);
+    setStageClipProgress(0);
     await waitForPaint();
 
     if (!isMotionCurrent(token, sectionId)) {
-      setShelfStageVisibility(true);
-      setOverlayStageVisibility(false);
-      bookStage.clearActiveSection();
-      return;
-    }
-
-    setOverlayStageVisibility(true);
-    setShelfStageVisibility(false);
-    await waitForPaint();
-
-    if (!isMotionCurrent(token, sectionId)) {
-      setShelfStageVisibility(true);
-      setOverlayStageVisibility(false);
       bookStage.clearActiveSection();
       return;
     }
@@ -299,13 +266,12 @@ if (!siteShell || !bookView || !bookshelf) {
       token,
       motionTokenRef,
       ({ progress }) => {
+        setStageClipProgress(easeOutCubic(mapRange(progress, 0, 0.22)));
         setContentProgress(mapRange(progress, 0.52, 0.88));
       },
     );
 
     if (!isMotionCurrent(token, sectionId)) {
-      setShelfStageVisibility(true);
-      setOverlayStageVisibility(false);
       return;
     }
 
@@ -320,10 +286,7 @@ if (!siteShell || !bookView || !bookshelf) {
 
   function teardownOverlay(trigger) {
     bookStage?.clearActiveSection();
-    shelfStage?.clearActiveSection();
-    setShelfStageVisibility(true);
-    setOverlayStageVisibility(false);
-    setOverlayClipProgress(1);
+    setStageClipProgress(0);
     bookView.classList.remove("is-content-visible", "is-open", "is-simple", "is-visible");
     bookView.setAttribute("aria-hidden", "true");
 
@@ -333,7 +296,7 @@ if (!siteShell || !bookView || !bookshelf) {
 
     document.body.classList.remove("view-open");
     siteShell.removeAttribute("aria-hidden");
-    syncStageClip();
+    syncStage();
     bookView.hidden = true;
     setContentProgress(0);
     leftSlot.replaceChildren();
@@ -347,26 +310,10 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   function setShelfVacancy(sectionId) {
-    shelfStage?.setVacant(sectionId);
+    bookStage?.setVacant(sectionId);
     bookButtons.forEach((button) => {
       button.classList.toggle("book--vacant", button.dataset.section === sectionId);
     });
-  }
-
-  function setShelfStageVisibility(visible) {
-    if (!shelfStageHost) {
-      return;
-    }
-
-    shelfStageHost.style.visibility = visible ? "visible" : "hidden";
-  }
-
-  function setOverlayStageVisibility(visible) {
-    if (!overlayStageHost) {
-      return;
-    }
-
-    overlayStageHost.style.visibility = visible ? "visible" : "hidden";
   }
 
   function shouldSimplifyMotion() {
@@ -374,7 +321,7 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   function shouldUse3D() {
-    return Boolean(shelfStage?.isReady && bookStage?.isReady);
+    return Boolean(bookStage?.isReady);
   }
 
   function setContentProgress(progress) {
@@ -383,87 +330,45 @@ if (!siteShell || !bookView || !bookshelf) {
     bookView.style.setProperty("--topline-progress", Math.min(clamped * 1.08, 1).toFixed(4));
   }
 
-  function syncOverlayShelfPoses() {
-    if (!shelfStage || !bookStage || bookView.hidden) {
-      return;
-    }
-
-    sections.forEach((section) => {
-      const pose = shelfStage.getShelfPose(section.id);
-      const isVisible = shelfStage.isEntryVisible(section.id);
-
-      if (pose) {
-        bookStage.setShelfPose(section.id, pose);
-      }
-
-      bookStage.setEntryVisible(section.id, isVisible);
-    });
-
-    bookStage.setShelfOrder(shelfStage.getShelfOrder());
-    bookStage.render();
-  }
-
   function syncStageClip() {
-    if (!shelfStageHost) {
-      return;
-    }
-
     const rect = bookshelf.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const borderRadius = window.getComputedStyle(bookshelf).borderTopLeftRadius || "18px";
+    const parsedRadius = Number.parseFloat(borderRadius);
 
-    applyShelfClipVars(shelfStageHost, rect, viewportWidth, viewportHeight, borderRadius);
     latestShelfClip = {
       top: Math.max(0, rect.top),
       right: Math.max(0, viewportWidth - rect.right),
       bottom: Math.max(0, viewportHeight - rect.bottom),
       left: Math.max(0, rect.left),
-      radius: Number.parseFloat(borderRadius) || 18,
+      radius: Number.isFinite(parsedRadius) ? parsedRadius : 18,
     };
-    applyOverlayClip();
+    applyStageClip();
   }
 
-  function applyShelfClipVars(element, rect, viewportWidth, viewportHeight, borderRadius) {
-    if (!element) {
+  function setStageClipProgress(progress) {
+    stageClipProgress = Math.max(0, Math.min(progress, 1));
+    applyStageClip();
+  }
+
+  function applyStageClip() {
+    if (!stageHost || !latestShelfClip) {
       return;
     }
 
-    element.style.setProperty("--shelf-clip-top", `${Math.max(0, rect.top)}px`);
-    element.style.setProperty("--shelf-clip-right", `${Math.max(0, viewportWidth - rect.right)}px`);
-    element.style.setProperty("--shelf-clip-bottom", `${Math.max(0, viewportHeight - rect.bottom)}px`);
-    element.style.setProperty("--shelf-clip-left", `${Math.max(0, rect.left)}px`);
-    element.style.setProperty("--shelf-clip-radius", borderRadius);
-  }
-
-  function setOverlayClipProgress(progress) {
-    overlayClipProgress = Math.max(0, Math.min(progress, 1));
-    applyOverlayClip();
-  }
-
-  function applyOverlayClip() {
-    if (!overlayStageHost || !latestShelfClip) {
-      return;
-    }
-
-    const progress = overlayClipProgress;
+    const progress = stageClipProgress;
     const top = latestShelfClip.top * (1 - progress);
     const right = latestShelfClip.right * (1 - progress);
     const bottom = latestShelfClip.bottom * (1 - progress);
     const left = latestShelfClip.left * (1 - progress);
     const radius = latestShelfClip.radius * (1 - progress);
 
-    overlayStageHost.style.clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px round ${radius}px)`;
+    stageHost.style.clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px round ${radius}px)`;
   }
 
   function syncStage() {
-    shelfStage?.syncLayout();
-
-    if (!bookView.hidden) {
-      bookStage?.resize();
-      syncOverlayShelfPoses();
-    }
-
+    bookStage?.resize();
     syncStageClip();
   }
 
@@ -488,6 +393,11 @@ if (!siteShell || !bookView || !bookshelf) {
     }
 
     return (value - start) / (end - start);
+  }
+
+  function easeOutCubic(value) {
+    const clamped = Math.max(0, Math.min(value, 1));
+    return 1 - ((1 - clamped) ** 3);
   }
 
   function waitForPaint() {
