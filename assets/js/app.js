@@ -1,5 +1,5 @@
 import { BookStage } from "./book-stage.js";
-import { renderShelfButtons, collectTemplates, populateBookView, syncTriggerState, trapFocus } from "./content.js";
+import { renderShelfButtons, populateBookView, syncTriggerState, trapFocus } from "./content.js";
 import { sectionMap, sections } from "./sections.js";
 import { easeDock, easeStandard } from "./utils.js";
 
@@ -41,7 +41,6 @@ if (!siteShell || !bookView || !bookshelf) {
   }
 
   const bookButtons = renderShelfButtons(bookshelf, sections);
-  const templates = collectTemplates(document);
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const desktopMotionQuery = window.matchMedia("(min-width: 861px)");
   const resizeObserver = typeof ResizeObserver === "function"
@@ -110,10 +109,9 @@ if (!siteShell || !bookView || !bookshelf) {
   });
 
   function openSection(sectionId, trigger) {
-    const template = templates.get(sectionId);
     const section = sectionMap.get(sectionId);
 
-    if (!template || !section || isClosing || activeSection === sectionId) {
+    if (!section || isClosing || activeSection === sectionId) {
       return;
     }
 
@@ -122,7 +120,6 @@ if (!siteShell || !bookView || !bookshelf) {
     lastTrigger = trigger;
 
     populateBookView({
-      template,
       section,
       elements: {
         contentPanel,
